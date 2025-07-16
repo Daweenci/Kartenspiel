@@ -1,12 +1,13 @@
 package game
 
 type Game struct {
-	Players []*Player
+	Players []*PlayerInGame
 	Deck    *Deck
 }
 
-type Player struct {
-	ID      int
+type PlayerInGame struct {
+	ID      string
+	Name    string
 	Hand    []Card
 	Figures []Figure
 }

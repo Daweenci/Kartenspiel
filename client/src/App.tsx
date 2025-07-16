@@ -1,35 +1,61 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState, useRef } from 'react';
+import Login from './pages/Login';
+import MainMenu from './pages/MainMenu';
+import GameOfTwo from './pages/GameOfTwo';
+import GameOfThree from './pages/GameOfThree';
+import GameOfFour from './pages/GameOfFour';
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [playerID, setPlayerID] = useState<string | null>(null);
+  const [playerName, setPlayerName] = useState<string>('');
+  const [gameID, setGameID] = useState<string | null>(null);
+  const [gameType, setGameType] = useState<'two' | 'three' | 'four' | null>(null);
+  const [lobbyID, setLobbyID] = useState<string | null>(null);
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+  const [currentPage, setCurrentPage] = useState<'login' | 'mainmenu' | 'game' | 'gameoftwo' | 'gameofthree' | 'gameoffour'>('login');
+  const ws = useRef<WebSocket | null>(null);
+
+  const handleLogin = (name: string) => {
+    ws.current = new WebSocket(`ws://localhost:4000/ws?name=${encodeURIComponent(name)}`);
+
+    ws.current.onopen = () => {
+      console.log('WebSocket connected');
+    };
+
+    ws.current.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === 'welcome') {
+        setPlayerID(data.id);
+        setPlayerName(name);
+        setCurrentPage('mainmenu'); // nach Login ins Hauptmenü
+      }
+      // weitere Nachrichten verarbeiten...
+    };
+
+    ws.current.onerror = (err) => {
+      console.error('WebSocket error:', err);
+    };
+
+    ws.current.onclose = () => {
+      console.log('WebSocket closed');
+      setPlayerID(null);
+      setPlayerName('');
+      setCurrentPage('login'); // zurück zum Login bei Verbindungsverlust
+    };
+  };
+
+  switch (currentPage) {
+    case 'login':
+      return <Login onLogin={handleLogin}/>;
+    case 'mainmenu':
+      return <MainMenu />;
+    case 'gameoftwo':
+      return <GameOfTwo />;
+    case 'gameofthree':
+      return <GameOfThree />;
+    case 'gameoffour':
+      return <GameOfFour />;
+    default:
+      return null;
+  }
 }
-
-export default App

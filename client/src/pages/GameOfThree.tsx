@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
 
-export default function mainMenu() {
+export default function GameOfThree() {
     return <div></div>
 }
