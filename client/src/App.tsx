@@ -4,6 +4,7 @@ import MainMenu from './pages/MainMenu';
 import GameOfTwo from './pages/GameOfTwo';
 import GameOfThree from './pages/GameOfThree';
 import GameOfFour from './pages/GameOfFour';
+import Lobby from './pages/Lobby';
 
 export default function App() {
   const [playerID, setPlayerID] = useState<string | null>(null);
@@ -12,7 +13,7 @@ export default function App() {
   const [gameType, setGameType] = useState<'two' | 'three' | 'four' | null>(null);
   const [lobbyID, setLobbyID] = useState<string | null>(null);
 
-  const [currentPage, setCurrentPage] = useState<'login' | 'mainmenu' | 'game' | 'gameoftwo' | 'gameofthree' | 'gameoffour'>('login');
+  const [currentPage, setCurrentPage] = useState<'login' | 'mainmenu' | 'inlobby' | 'gameoftwo' | 'gameofthree' | 'gameoffour'>('login');
   const ws = useRef<WebSocket | null>(null);
 
   const handleLogin = (name: string) => {
@@ -24,12 +25,20 @@ export default function App() {
 
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      if (data.type === 'welcome') {
-        setPlayerID(data.id);
-        setPlayerName(name);
-        setCurrentPage('mainmenu'); // nach Login ins Hauptmenü
+      switch (data.type) {
+        case 'welcome':
+          setPlayerID(data.id);
+          setPlayerName(name);
+          setCurrentPage('mainmenu'); 
+          break;
+        case 'lobby_created':
+          setLobbyID(data.lobbyID);
+          setCurrentPage('inlobby');
+          break;
+        case 'update_lobbies':
+          // Muss gemacht werden
+          break;
       }
-      // weitere Nachrichten verarbeiten...
     };
 
     ws.current.onerror = (err) => {
@@ -40,15 +49,36 @@ export default function App() {
       console.log('WebSocket closed');
       setPlayerID(null);
       setPlayerName('');
-      setCurrentPage('login'); // zurück zum Login bei Verbindungsverlust
+      setCurrentPage('login'); 
     };
+  };
+
+  const handleCreatelobby = (name: string, maxPlayers: number, isPrivate: boolean, password: string) => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket is not connected');
+      return;
+    }
+
+    const lobbyData = {
+      type: 'create_lobby',
+      name,
+      maxPlayers,
+      isPrivate,
+      password,
+      playerID,
+      playerName,
+    };
+
+    ws.current.send(JSON.stringify(lobbyData));
   };
 
   switch (currentPage) {
     case 'login':
       return <Login onLogin={handleLogin}/>;
     case 'mainmenu':
-      return <MainMenu />;
+      return <MainMenu createLobby={handleCreatelobby}/>;
+    case 'inlobby':
+      return <Lobby/>;
     case 'gameoftwo':
       return <GameOfTwo />;
     case 'gameofthree':

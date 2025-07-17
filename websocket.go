@@ -23,10 +23,13 @@ type JoinLobbyMessage struct {
 }
 
 type CreateLobbyMessage struct {
-	Type      string `json:"type"`
-	LobbyName string `json:"lobby_name"`
-	ID        string `json:"id"`
-	Name      string `json:"name"`
+	Type       string `json:"type"`
+	LobbyName  string `json:"name"`
+	MaxPlayers int    `json:"maxPlayers"`
+	IsPrivate  bool   `json:"isPrivate"`
+	Password   string `json:"password"`
+	PlayerID   string `json:"playerID"`
+	PlayerName string `json:"playerName"`
 }
 
 type LeaveLobbyMessage struct {
@@ -36,9 +39,12 @@ type LeaveLobbyMessage struct {
 }
 
 type Lobby struct {
-	ID      string
-	Name    string
-	Players []Player
+	ID         string
+	Name       string
+	MaxPlayers int
+	IsPrivate  bool
+	Password   string
+	Players    []Player
 }
 
 var (
@@ -175,12 +181,15 @@ func createLobbyHandler(msg CreateLobbyMessage) {
 	defer lobbiesLock.Unlock()
 
 	newLobby := Lobby{
-		ID:   uuid.New().String(),
-		Name: msg.LobbyName,
+		ID:         uuid.New().String(),
+		Name:       msg.LobbyName,
+		MaxPlayers: msg.MaxPlayers,
+		IsPrivate:  msg.IsPrivate,
+		Password:   msg.Password,
 		Players: []Player{
 			{
-				ID:   msg.ID,
-				Name: msg.Name,
+				Name: msg.PlayerName,
+				ID:   msg.PlayerID,
 			},
 		},
 	}
