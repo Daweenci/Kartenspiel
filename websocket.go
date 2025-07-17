@@ -24,10 +24,10 @@ type JoinLobbyMessage struct {
 
 type CreateLobbyMessage struct {
 	Type       string `json:"type"`
-	LobbyName  string `json:"name"`
+	LobbyName  string `json:"lobbyName"`
 	MaxPlayers int    `json:"maxPlayers"`
 	IsPrivate  bool   `json:"isPrivate"`
-	Password   string `json:"password"`
+	Password   string `json:"password,omitempty"`
 	PlayerID   string `json:"playerID"`
 	PlayerName string `json:"playerName"`
 }
@@ -39,12 +39,12 @@ type LeaveLobbyMessage struct {
 }
 
 type Lobby struct {
-	ID         string
-	Name       string
-	MaxPlayers int
-	IsPrivate  bool
-	Password   string
-	Players    []Player
+	ID         string   `json:"id"`
+	Name       string   `json:"name"`
+	MaxPlayers int      `json:"maxPlayers"`
+	IsPrivate  bool     `json:"isPrivate"`
+	Password   string   `json:"password,omitempty"`
+	Players    []Player `json:"players"`
 }
 
 var (
@@ -80,18 +80,14 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	err = conn.WriteJSON(map[string]interface{}{
-		"type": "welcome",
-		"id":   player.ID,
-	})
-	if err != nil {
-		log.Println("Error sending welcome message:", err)
-		return
-	}
+	clientsLock.Lock()
+	clients[conn] = true
+	clientsLock.Unlock()
 
 	err = conn.WriteJSON(map[string]interface{}{
-		"type": "welcome",
-		"id":   player.ID,
+		"type":    "welcome",
+		"id":      player.ID,
+		"lobbies": lobbies,
 	})
 	if err != nil {
 		log.Println("Error sending welcome message:", err)
@@ -112,7 +108,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			log.Println("Invalid message format")
 			continue
 		}
-
+		log.Println("Received message type:", base.Type)
 		switch base.Type {
 		case "join_lobby":
 			var msg JoinLobbyMessage
@@ -136,7 +132,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				log.Println("Invalid create_lobby message")
 				continue
 			}
-			createLobbyHandler(msg)
+			createLobbyHandler(msg, conn)
+		default:
+			log.Println("Unknown message type:", base.Type)
 		}
 	}
 }
@@ -176,7 +174,7 @@ func leaveLobbyHandler(msg LeaveLobbyMessage) {
 	}
 }
 
-func createLobbyHandler(msg CreateLobbyMessage) {
+func createLobbyHandler(msg CreateLobbyMessage, conn *websocket.Conn) {
 	lobbiesLock.Lock()
 	defer lobbiesLock.Unlock()
 
@@ -195,13 +193,22 @@ func createLobbyHandler(msg CreateLobbyMessage) {
 	}
 	lobbies = append(lobbies, newLobby)
 	broadcastLobbies()
+
+	var err = conn.WriteJSON(map[string]interface{}{
+		"type":  "lobby_created",
+		"lobby": newLobby,
+	})
+	if err != nil {
+		log.Println("Error sending LobbyID:", err)
+		return
+	}
 }
 
 func broadcastLobbies() {
+	log.Println("hiiiiiiiiiiiiiiiiiiiiiiilfeeeeeeeeeeeeeeeeee:", clients)
 	clientsLock.Lock()
-	lobbiesLock.Lock()
-	defer lobbiesLock.Unlock()
 	defer clientsLock.Unlock()
+	log.Println("Broadcasting lobby list to clients:", clients)
 	for client := range clients {
 		err := client.WriteJSON(map[string]interface{}{
 			"type":    "lobby_list",
@@ -210,6 +217,8 @@ func broadcastLobbies() {
 		if err != nil {
 			client.Close()
 			delete(clients, client)
+			log.Println("broadcast Lobbies error:", err)
 		}
+		log.Println("Broadcasted lobby list to client")
 	}
 }

@@ -8,7 +8,13 @@ import { Check } from 'lucide-react';
 
 
 type CreateLobbyProps = {
-  createLobby: (name: string, maxPlayers: number, isPrivate: boolean, password: string,) => void;
+  createLobby: (name: string, maxPlayers: number, isPrivate: boolean, password: string) => void;
+  lobbies: Lobby[];
+};
+
+type Player = {
+	name: string;
+	id:   string;
 };
 
 type Lobby = {
@@ -16,35 +22,26 @@ type Lobby = {
   name: string;
   maxPlayers: number;
   isPrivate: boolean;
-  password?: string;
-  playerNames: string[];
+  players: Player[];
 };
 
-export default function mainMenu({createLobby}: CreateLobbyProps) {
+export default function mainMenu({createLobby, lobbies}: CreateLobbyProps) {
     const [isPrivate, setIsPrivate] = useState(false);
     const [password, setPassword] = useState('');
-    const [lobbies, setLobbies] = useState<Lobby[]>([]); 
     const [lobbyName, setLobbyName] = useState('');
     const [maxPlayers, setMaxPlayers] = useState<"2" | "3" | "4">("2");
 
-    useEffect(() => { //zum Testen
-        setLobbies([
-            { id: '1', name: 'Chill Zone', maxPlayers: 4, isPrivate: false , playerNames: ['Alice', 'Bob'] },
-            { id: '2', name: 'Secret Squad', maxPlayers: 3, isPrivate: true, playerNames: ['Alice', 'Bob']},
-            { id: '3', name: 'Legends Only', maxPlayers: 2, isPrivate: false, playerNames: ['Alice', 'Bob'] },
-        ]);
-    }, []);
     return <div>
                 <h1 className="text-4xl font-bold mb-4 flex justify-center" >Main Menu</h1>
 
                 <div id="existingLobbies" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 px-6">
-                    {lobbies.map((lobby) => (
+                    {lobbies?.map((lobby) => (
                         <div key={lobby.id} className="p-4 border rounded shadow bg-white hover:shadow-md transition">
                         <h3 className="text-lg font-semibold mb-2">{lobby.name}</h3>
-                        <p>Players <strong>({lobby.playerNames.length}/{lobby.maxPlayers})</strong>:</p>
+                        <p>Players <strong>({lobby.players.length}/{lobby.maxPlayers})</strong>:</p>
                         <ul className="list-disc pl-5 mb-2">
-                            {lobby.playerNames.map((name, index) => (
-                                <li key={index}>{name}</li>
+                            {lobby.players.map((player, index) => (
+                                <li key={index}>{player.name}</li>
                             ))}
                         </ul>
                         <p>{lobby.isPrivate ? '🔒 Private' : '🌐 Public'}</p>
