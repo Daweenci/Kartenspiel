@@ -11,6 +11,7 @@ export type Lobby = {
   name: string;
   maxPlayers: number;
   isPrivate: boolean;
+  password: string; // Only set if its your own lobby or u joined it
   players: Player[];
 };
 

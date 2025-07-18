@@ -14,7 +14,7 @@ export default function App() {
   const [currentLobbies, setCurrentLobbies] = useState<Lobby[]>([]);
   const [gameID, setGameID] = useState<string | null>(null);
   const [gameType, setGameType] = useState<'2' | '3' | '4' | null>(null);
-  const [lobby, setLobby] = useState<string | null>(null);
+  const [lobby, setLobby] = useState<Lobby>({} as Lobby);
 
   const [currentPage, setCurrentPage] = useState<PageType>(Page.Login);
   const ws = useRef<WebSocket | null>(null);
@@ -81,13 +81,25 @@ export default function App() {
     console.log('Lobby creation request sent:', lobbyData);
   };
 
+  const handleStartgame = () => {
+
+  }
+
+  const handleCancelGame = () => {
+
+  };
+
+  const handleLeaveLobby = () => {
+
+  }
+
   switch (currentPage) {
     case Page.Login:
       return <Login onLogin={handleLogin}/>;
     case Page.MainMenu:
       return <MainMenu createLobby={handleCreatelobby} lobbies={currentLobbies}/>;
     case Page.InLobby:
-      return <LobbyScreen />;
+      return <LobbyScreen startGame={handleStartgame} cancelGame={handleCancelGame} leaveLobby={handleLeaveLobby} initLobby={lobby}/>;
     case Page.GameOfTwo:
       return <GameOfTwo />;
     case Page.GameOfThree:
