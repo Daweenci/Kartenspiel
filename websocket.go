@@ -47,10 +47,24 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	clients[conn] = true
 	clientsLock.Unlock()
 
+	lobbiesLock.Lock()
+	responseLobbies := make([]LobbyWithoutPassword, 0, len(lobbies))
+	for _, l := range lobbies {
+		responseLobbies = append(responseLobbies, LobbyWithoutPassword{
+			ID:         l.ID,
+			Name:       l.Name,
+			MaxPlayers: l.MaxPlayers,
+			IsPrivate:  l.IsPrivate,
+			Players:    l.Players,
+		})
+
+	}
+	lobbiesLock.Unlock()
+
 	err = conn.WriteJSON(map[string]interface{}{
 		"type":    ResponseWelcome,
 		"id":      player.ID,
-		"lobbies": lobbies,
+		"lobbies": responseLobbies,
 	})
 	if err != nil {
 		log.Println("Error sending welcome message:", err)

@@ -41,6 +41,7 @@ export default function App() {
           break;
         case MessageTypes.ResponseLobbyCreated:
           setLobby(data.lobby);
+          console.log('Lobby created:', data.lobby);
           setCurrentPage(Page.InLobby);
           break;
         default:

@@ -31,7 +31,7 @@ type CreateLobbyRequest struct {
 	LobbyName  string      `json:"lobbyName"`
 	MaxPlayers int         `json:"maxPlayers"`
 	IsPrivate  bool        `json:"isPrivate"`
-	Password   string      `json:"password,omitempty"`
+	Password   string      `json:"password"`
 	PlayerID   string      `json:"playerID"`
 	PlayerName string      `json:"playerName"`
 }
@@ -42,11 +42,19 @@ type LeaveLobbyRequest struct {
 	ID      string      `json:"id"`
 }
 
+type LobbyWithoutPassword struct {
+	ID         string   `json:"id"`
+	Name       string   `json:"name"`
+	MaxPlayers int      `json:"maxPlayers"`
+	IsPrivate  bool     `json:"isPrivate"`
+	Players    []Player `json:"players"`
+}
+
 type Lobby struct {
 	ID         string   `json:"id"`
 	Name       string   `json:"name"`
 	MaxPlayers int      `json:"maxPlayers"`
 	IsPrivate  bool     `json:"isPrivate"`
-	Password   string   `json:"password,omitempty"`
+	Password   string   `json:"password"`
 	Players    []Player `json:"players"`
 }

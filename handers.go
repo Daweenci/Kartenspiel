@@ -59,6 +59,7 @@ func createLobbyHandler(msg CreateLobbyRequest, conn *websocket.Conn) {
 			},
 		},
 	}
+
 	lobbies = append(lobbies, newLobby)
 	broadcastLobbies()
 
@@ -73,12 +74,23 @@ func createLobbyHandler(msg CreateLobbyRequest, conn *websocket.Conn) {
 }
 
 func broadcastLobbies() {
+
+	responseLobbies := make([]LobbyWithoutPassword, 0, len(lobbies))
+	for _, l := range lobbies {
+		responseLobbies = append(responseLobbies, LobbyWithoutPassword{
+			ID:         l.ID,
+			Name:       l.Name,
+			MaxPlayers: l.MaxPlayers,
+			IsPrivate:  l.IsPrivate,
+			Players:    l.Players,
+		})
+	}
+
 	clientsLock.Lock()
-	defer clientsLock.Unlock()
 	for client := range clients {
 		err := client.WriteJSON(map[string]interface{}{
 			"type":    ResponseLobbyList,
-			"lobbies": lobbies,
+			"lobbies": responseLobbies,
 		})
 		if err != nil {
 			client.Close()
@@ -87,4 +99,5 @@ func broadcastLobbies() {
 		}
 		log.Println("Broadcasted lobby list to client")
 	}
+	clientsLock.Unlock()
 }
