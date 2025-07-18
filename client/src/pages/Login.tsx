@@ -15,7 +15,7 @@ export default function Login({ onLogin }: LoginProps) {
       alert('Please enter your name');
       return;
     }
-    onLogin(name.trim()); // call the parent's handler
+    onLogin(name.trim()); 
   };
 
   return (
