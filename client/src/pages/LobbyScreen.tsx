@@ -12,7 +12,7 @@ export default function LobbyScreen({ startGame, cancelGame, leaveLobby, initLob
   const [gameStarting, setGameStarting] = useState(false);
 
   return (
-    <div className="flex items-center justify-center">
+    <div className="flex items-center justify-center min-h-screen">
       <div className="flex-col items-center justify-center p-16 border-2 border-gray-300 rounded-4xl">
         <h1><strong>Lobby:</strong> {initLobby.name}</h1>
         <h1><strong>Players {initLobby.players.length}/{initLobby.maxPlayers}:</strong></h1>
@@ -21,7 +21,9 @@ export default function LobbyScreen({ startGame, cancelGame, leaveLobby, initLob
             <li key={index}>{player.name}</li>
           ))}
         </ul>
-        <h1><strong>Password:</strong> {initLobby.password}</h1>
+        {initLobby.password !== "" && (
+          <h1><strong>Password:</strong> {initLobby.password}</h1>
+        )}
         <div>
           <button
             onClick={handleLeaveLobby}

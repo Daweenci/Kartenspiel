@@ -37,6 +37,9 @@ export const MessageTypes = {
   ResponseLobbyCreated: 'lobby_created',
   ResponseLobbyList: 'lobby_list',
   ResponseLobbyUpdated: 'lobby_updated',
+  ResponseJoinLobbySuccess: 'join_lobby_success',
+  ResponseJoinLobbyFailure: 'join_lobby_failure',
+  ResponseLobbyLeft: 'lobby_left',
 } as const;
 
 export const Page = {

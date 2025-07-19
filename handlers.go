@@ -10,11 +10,56 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 	lobbiesLock.Lock()
 	defer lobbiesLock.Unlock()
 
-	if lobby, ok := lobbies[msg.LobbyID]; ok {
-		player := players[msg.PlayerID]
-		lobby.Players = append(lobby.Players, player)
-		broadcastLobbies()
+	lobby, ok := lobbies[msg.LobbyID]
+	if !ok {
+		log.Println("joinLobbyHandler: Lobby not found")
+		return
 	}
+
+	player, ok := players[msg.PlayerID]
+	if !ok {
+		log.Println("joinLobbyHandler: Player not found")
+		return
+	}
+
+	// Check if player is already in the lobby
+	for _, p := range lobby.Players {
+		if p.ID == msg.PlayerID {
+			// Already in the lobby, silently ignore or send a success response if needed
+			return
+		}
+	}
+
+	// Check lobby capacity
+	if len(lobby.Players) >= lobby.MaxPlayers {
+		player.Conn.WriteJSON(map[string]interface{}{
+			"type": ResponseJoinLobbyFailure,
+		})
+		return
+	}
+
+	// Check password
+	if lobby.Password != msg.Password {
+		err := player.Conn.WriteJSON(map[string]interface{}{
+			"type": ResponseJoinLobbyFailure,
+		})
+		if err != nil {
+			log.Println("Error sending join failure response:", err)
+		}
+		return
+	}
+
+	// Add player and respond
+	lobby.Players = append(lobby.Players, player)
+	err := player.Conn.WriteJSON(map[string]interface{}{
+		"type":  ResponseJoinLobbySuccess,
+		"lobby": lobby,
+	})
+	if err != nil {
+		log.Println("Error sending Lobby join success:", err)
+	}
+	broadcastLobbyUpdate(lobby)
+	broadcastLobbies()
 }
 
 func leaveLobbyHandler(msg LeaveLobbyRequest) {
@@ -37,12 +82,18 @@ func leaveLobbyHandler(msg LeaveLobbyRequest) {
 
 		if len(lobby.Players) == 0 {
 			delete(lobbies, lobby.ID)
-			broadcastLobbies()
 		} else {
 			broadcastLobbyUpdate(lobby)
 		}
+		err := players[msg.PlayerID].Conn.WriteJSON(map[string]interface{}{
+			"type": ResponseLobbyLeft,
+		})
+		if err != nil {
+			log.Println("Error sending LobbyID:", err)
+			return
+		}
+		broadcastLobbies()
 	}
-
 }
 
 func createLobbyHandler(msg CreateLobbyRequest) {

@@ -10,7 +10,6 @@ import { MessageTypes, Page } from './structs';
 
 export default function App() {
   const [player, setPlayer] = useState<Player>({} as Player);
-  const [playerName, setPlayerName] = useState<string>('');
   const [broadcastedLobbies, setbroadcastedLobbies] = useState<boradcastedLobby[]>([]);
   const [gameID, setGameID] = useState<string | null>(null);
   const [gameType, setGameType] = useState<'2' | '3' | '4' | null>(null);
@@ -26,9 +25,14 @@ export default function App() {
       console.log('WebSocket connected');
     };
 
-    ws.current.onmessage = (event) => {
+    ws.current.onmessage = async (event) => {
       const data = JSON.parse(event.data);
       switch (data.type) {
+        case MessageTypes.ResponseLobbyLeft:
+          console.log('Left Lobby');
+          setCurrentPage(Page.MainMenu);   
+          setLobby({} as yourLobby);
+          break;
         case MessageTypes.ResponseLobbyUpdated:
           console.log('Lobby updated:', data.lobby);
           setLobby(data.lobby);
@@ -48,6 +52,15 @@ export default function App() {
           console.log('Lobby created:', data.lobby);
           setCurrentPage(Page.InLobby);
           break;
+        case MessageTypes.ResponseJoinLobbySuccess:
+          console.log('Joined Lobby:', data);
+          setLobby(data.lobby)
+          setCurrentPage(Page.InLobby);
+          console.log('Joined Lobby:', data.lobby);
+          break;
+        case MessageTypes.ResponseJoinLobbyFailure:
+          console.log("incorrect Password");
+          break;
         default:
           console.warn('Unknown message type:', data.type);
       }
@@ -60,8 +73,6 @@ export default function App() {
     ws.current.onclose = () => {
       console.log('WebSocket closed');
       setPlayer({} as Player);
-      setPlayerName('');
-      setCurrentPage(Page.Login); 
     };
   };
 
@@ -85,7 +96,7 @@ export default function App() {
     console.log('Lobby creation request sent:', lobbyData);
   };
 
-  const handleStartgame = () => {
+  const handleStartGame = () => {
     if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
       console.error('WebSocket is not connected');
       return;
@@ -131,17 +142,32 @@ export default function App() {
 
     ws.current.send(JSON.stringify(leaveLobbyData));
     console.log('Leave lobby request sent:', leaveLobbyData);
-    setCurrentPage(Page.MainMenu);
-    setLobby({} as yourLobby);
+  }
+
+  const handleJoinLobby = (id: string, joinPassword: string) => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket is not connected');
+      return;
+    }
+    
+    const joinLobbyData = {
+      type: MessageTypes.RequestJoinLobby,
+      lobbyID: id,
+      playerID: player.id,
+      password: joinPassword
+    }
+
+    ws.current.send(JSON.stringify(joinLobbyData));
+    console.log('Join lobby request sent:', );
   }
 
   switch (currentPage) {
     case Page.Login:
       return <Login onLogin={handleLogin}/>;
     case Page.MainMenu:
-      return <MainMenu createLobby={handleCreatelobby} lobbies={broadcastedLobbies}/>;
+      return <MainMenu createLobby={handleCreatelobby} joinLobby={handleJoinLobby} lobbies={broadcastedLobbies} currentPlayerID={player.id}/>;
     case Page.InLobby:
-      return <LobbyScreen startGame={handleStartgame} cancelGame={handleCancelGame} leaveLobby={handleLeaveLobby} initLobby={lobby}/>;
+      return <LobbyScreen startGame={handleStartGame} cancelGame={handleCancelGame} leaveLobby={handleLeaveLobby} initLobby={lobby}/>;
     case Page.GameOfTwo:
       return <GameOfTwo />;
     case Page.GameOfThree:

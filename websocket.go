@@ -38,10 +38,27 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		conn.Close()
+		log.Println("Connection closed for player:", player.ID)
 		playersLock.Lock()
+		var breakLoop = false
+		for _, lobby := range lobbies {
+			for index, compPlayer := range lobby.Players {
+				if compPlayer.ID == player.ID {
+					lobby.Players = append(lobby.Players[:index], lobby.Players[index+1:]...)
+					if len(lobby.Players) == 0 {
+						delete(lobbies, lobby.ID)
+					}
+					breakLoop = true
+					break
+				}
+			}
+			if breakLoop {
+				break
+			}
+		}
 		delete(players, player.ID)
 		playersLock.Unlock()
-		log.Println("Connection closed for player:", player.ID)
+		broadcastLobbies()
 	}()
 
 	playersLock.Lock()
@@ -63,6 +80,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	err = conn.WriteJSON(map[string]interface{}{
 		"type":    ResponseWelcome,
+		"name":    player.Name,
 		"id":      player.ID,
 		"lobbies": responseLobbies,
 	})
