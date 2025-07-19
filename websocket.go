@@ -11,53 +11,53 @@ import (
 )
 
 var (
-	lobbies     = []Lobby{}
+	lobbies     = make(map[string]*Lobby)
 	lobbiesLock sync.Mutex
-	clients     = make(map[*websocket.Conn]bool)
 	upgrader    = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
-
-	players     = make(map[string]Player)
+	players     = make(map[string]*Player)
 	playersLock sync.Mutex
-
-	clientsLock sync.Mutex
 )
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
-	name := r.URL.Query().Get("name")
-	player := Player{
-		ID:   uuid.New().String(),
-		Name: name,
-	}
-	playersLock.Lock()
-	players[player.ID] = player
-	playersLock.Unlock()
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("Error upgrading connection:", err)
 		return
 	}
-	defer conn.Close()
 
-	clientsLock.Lock()
-	clients[conn] = true
-	clientsLock.Unlock()
+	name := r.URL.Query().Get("name")
+	player := &Player{
+		ID:   uuid.New().String(),
+		Name: name,
+		Conn: conn,
+	}
+
+	defer func() {
+		conn.Close()
+		playersLock.Lock()
+		delete(players, player.ID)
+		playersLock.Unlock()
+		log.Println("Connection closed for player:", player.ID)
+	}()
+
+	playersLock.Lock()
+	players[player.ID] = player
+	playersLock.Unlock()
 
 	lobbiesLock.Lock()
-	responseLobbies := make([]LobbyWithoutPassword, 0, len(lobbies))
+	responseLobbies := make([]BroadcastedLobby, 0, len(lobbies))
 	for _, l := range lobbies {
-		responseLobbies = append(responseLobbies, LobbyWithoutPassword{
+		responseLobbies = append(responseLobbies, BroadcastedLobby{
 			ID:         l.ID,
 			Name:       l.Name,
 			MaxPlayers: l.MaxPlayers,
 			IsPrivate:  l.IsPrivate,
 			Players:    l.Players,
 		})
-
 	}
 	lobbiesLock.Unlock()
 
@@ -109,7 +109,24 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				log.Println("Invalid create_lobby message")
 				continue
 			}
-			createLobbyHandler(msg, conn)
+			createLobbyHandler(msg)
+
+		case RequestStartGame:
+			var msg StartGame
+			if err := json.Unmarshal(msgBytes, &msg); err != nil {
+				log.Println("Invalid start_game message")
+				continue
+			}
+			startGameHandler(msg)
+
+		case RequestCancelGame:
+			var msg CancelGame
+			if err := json.Unmarshal(msgBytes, &msg); err != nil {
+				log.Println("Invalid cancel_game message")
+				continue
+			}
+			cancelGameHandler(msg)
+
 		default:
 			log.Println("Unknown message type:", base.Type)
 		}

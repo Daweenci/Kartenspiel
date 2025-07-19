@@ -5,16 +5,16 @@ import GameOfTwo from './pages/GameOfTwo';
 import GameOfThree from './pages/GameOfThree';
 import GameOfFour from './pages/GameOfFour';
 import LobbyScreen from './pages/LobbyScreen';
-import type { Lobby, PageType } from './structs';
+import type { yourLobby, boradcastedLobby, PageType, Player } from './structs';
 import { MessageTypes, Page } from './structs';
 
 export default function App() {
-  const [playerID, setPlayerID] = useState<string | null>(null);
+  const [player, setPlayer] = useState<Player>({} as Player);
   const [playerName, setPlayerName] = useState<string>('');
-  const [currentLobbies, setCurrentLobbies] = useState<Lobby[]>([]);
+  const [broadcastedLobbies, setbroadcastedLobbies] = useState<boradcastedLobby[]>([]);
   const [gameID, setGameID] = useState<string | null>(null);
   const [gameType, setGameType] = useState<'2' | '3' | '4' | null>(null);
-  const [lobby, setLobby] = useState<Lobby>({} as Lobby);
+  const [lobby, setLobby] = useState<yourLobby>({} as yourLobby);
 
   const [currentPage, setCurrentPage] = useState<PageType>(Page.Login);
   const ws = useRef<WebSocket | null>(null);
@@ -29,15 +29,19 @@ export default function App() {
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
       switch (data.type) {
+        case MessageTypes.ResponseLobbyUpdated:
+          console.log('Lobby updated:', data.lobby);
+          setLobby(data.lobby);
+          break;
         case MessageTypes.ResponseLobbyList:
           console.log('Received lobby list:', data.lobbies);
-          setCurrentLobbies(data.lobbies);
+          setbroadcastedLobbies(data.lobbies);
           break;
         case MessageTypes.ResponseWelcome:
-          setPlayerID(data.id);
-          setPlayerName(name);
+          console.log('Welcome:', data.name);
+          setPlayer({id: data.id, name: name,});
           setCurrentPage(Page.MainMenu);
-          setCurrentLobbies(data.lobbies);
+          setbroadcastedLobbies(data.lobbies);
           break;
         case MessageTypes.ResponseLobbyCreated:
           setLobby(data.lobby);
@@ -55,7 +59,7 @@ export default function App() {
 
     ws.current.onclose = () => {
       console.log('WebSocket closed');
-      setPlayerID(null);
+      setPlayer({} as Player);
       setPlayerName('');
       setCurrentPage(Page.Login); 
     };
@@ -73,8 +77,8 @@ export default function App() {
       maxPlayers,
       isPrivate,
       password,
-      playerID,
-      playerName,
+      playerID: player.id,
+      playerName: player.name,
     };
 
     ws.current.send(JSON.stringify(lobbyData));
@@ -82,22 +86,60 @@ export default function App() {
   };
 
   const handleStartgame = () => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket is not connected');
+      return;
+    }
 
+    const startGameData = {
+      type: MessageTypes.RequestStartGame,
+      lobbyID: lobby.id,
+      PlayerID: player.id,
+    };
+
+    ws.current.send(JSON.stringify(startGameData));
+    console.log('Game start request sent:', startGameData);
   }
 
   const handleCancelGame = () => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket is not connected');
+      return;
+    }
 
+    const cancelGameData = {
+      type: MessageTypes.RequestCancelGame,
+      lobbyID: lobby.id,
+      playerID: player.id,
+    };
+
+    ws.current.send(JSON.stringify(cancelGameData));
+    console.log('Game cancel request sent:', cancelGameData);
   };
 
   const handleLeaveLobby = () => {
+    if (!ws.current || ws.current.readyState !== WebSocket.OPEN) {
+      console.error('WebSocket is not connected');
+      return;
+    }
 
+    const leaveLobbyData = {
+      type: MessageTypes.RequestLeaveLobby,
+      lobbyID: lobby.id,
+      playerID: player.id,
+    };
+
+    ws.current.send(JSON.stringify(leaveLobbyData));
+    console.log('Leave lobby request sent:', leaveLobbyData);
+    setCurrentPage(Page.MainMenu);
+    setLobby({} as yourLobby);
   }
 
   switch (currentPage) {
     case Page.Login:
       return <Login onLogin={handleLogin}/>;
     case Page.MainMenu:
-      return <MainMenu createLobby={handleCreatelobby} lobbies={currentLobbies}/>;
+      return <MainMenu createLobby={handleCreatelobby} lobbies={broadcastedLobbies}/>;
     case Page.InLobby:
       return <LobbyScreen startGame={handleStartgame} cancelGame={handleCancelGame} leaveLobby={handleLeaveLobby} initLobby={lobby}/>;
     case Page.GameOfTwo:

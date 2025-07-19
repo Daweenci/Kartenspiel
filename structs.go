@@ -1,29 +1,34 @@
 package main
 
+import "github.com/gorilla/websocket"
+
 type MessageType string
 
 const (
-	//Recieved message types
 	RequestCreateLobby MessageType = "create_lobby"
 	RequestJoinLobby   MessageType = "join_lobby"
 	RequestLeaveLobby  MessageType = "leave_lobby"
+	RequestStartGame   MessageType = "start_game"
+	RequestCancelGame  MessageType = "cancel_game"
 
-	//Sent message types
 	ResponseWelcome      MessageType = "welcome"
 	ResponseLobbyCreated MessageType = "lobby_created"
 	ResponseLobbyList    MessageType = "lobby_list"
+	ResponseLobbyUpdated MessageType = "lobby_updated"
 )
 
 type Player struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID   string          `json:"id"`
+	Name string          `json:"name"`
+	Conn *websocket.Conn `json:"-"`
 }
 
 type JoinLobbyRequest struct {
-	Type    MessageType `json:"type"`
-	LobbyID string      `json:"lobby_id"`
-	ID      string      `json:"id"`
-	Name    string      `json:"name"`
+	Type     MessageType `json:"type"`
+	LobbyID  string      `json:"lobbyID"`
+	PlayerID string      `json:"playerID"`
+	Name     string      `json:"name"`
+	Password string      `json:"password"`
 }
 
 type CreateLobbyRequest struct {
@@ -37,24 +42,41 @@ type CreateLobbyRequest struct {
 }
 
 type LeaveLobbyRequest struct {
-	Type    MessageType `json:"type"`
-	LobbyID string      `json:"lobby_id"`
-	ID      string      `json:"id"`
+	Type     MessageType `json:"type"`
+	LobbyID  string      `json:"lobbyID"`
+	PlayerID string      `json:"playerID"`
 }
 
-type LobbyWithoutPassword struct {
-	ID         string   `json:"id"`
-	Name       string   `json:"name"`
-	MaxPlayers int      `json:"maxPlayers"`
-	IsPrivate  bool     `json:"isPrivate"`
-	Players    []Player `json:"players"`
+type StartGame struct {
+	Type     MessageType `json:"type"`
+	LobbyID  string      `json:"lobbyID"`
+	PlayerID string      `json:"playerID"`
+}
+
+type CancelGame struct {
+	Type     MessageType `json:"type"`
+	LobbyID  string      `json:"lobbyID"`
+	PlayerID string      `json:"playerID"`
+}
+
+type BroadcastedLobby struct {
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	MaxPlayers int       `json:"maxPlayers"`
+	IsPrivate  bool      `json:"isPrivate"`
+	Players    []*Player `json:"players"`
 }
 
 type Lobby struct {
-	ID         string   `json:"id"`
-	Name       string   `json:"name"`
-	MaxPlayers int      `json:"maxPlayers"`
-	IsPrivate  bool     `json:"isPrivate"`
-	Password   string   `json:"password"`
-	Players    []Player `json:"players"`
+	ID         string          `json:"id"`
+	Name       string          `json:"name"`
+	MaxPlayers int             `json:"maxPlayers"`
+	IsPrivate  bool            `json:"isPrivate"`
+	Password   string          `json:"password"`
+	Players    []*Player       `json:"players"`
+	GameStart  []PlayerStarted `json:"gameStart"`
+}
+
+type PlayerStarted struct {
+	ID string `json:"id"`
 }

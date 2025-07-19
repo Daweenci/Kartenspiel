@@ -6,14 +6,22 @@ export type Player = {
 	id:   string;
 };
 
-export type Lobby = {
+export type yourLobby = {
   id: string;
   name: string;
   maxPlayers: number;
   isPrivate: boolean;
-  password: string; // Only set if its your own lobby or u joined it
+  password: string; 
   players: Player[];
-  playersStartedGame: number;
+  gameStart: PlayersStarted[];
+};
+
+export type boradcastedLobby = {
+  id: string;
+  name: string;
+  maxPlayers: number;
+  isPrivate: boolean;
+  players: Player[];
 };
 
 export const MessageTypes = {
@@ -21,11 +29,14 @@ export const MessageTypes = {
   RequestCreateLobby: 'create_lobby',
   RequestJoinLobby: 'join_lobby',
   RequestLeaveLobby: 'leave_lobby',
+  RequestStartGame: 'start_game',
+  RequestCancelGame: 'cancel_game',
 
   //Sent from Client
   ResponseWelcome: 'welcome',
   ResponseLobbyCreated: 'lobby_created',
   ResponseLobbyList: 'lobby_list',
+  ResponseLobbyUpdated: 'lobby_updated',
 } as const;
 
 export const Page = {
@@ -39,3 +50,8 @@ export const Page = {
 } as const;
 
 export type PageType = typeof Page[keyof typeof Page];
+
+type PlayersStarted = {
+  playerID: string;
+  gameStarted: boolean;
+};

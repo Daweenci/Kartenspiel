@@ -4,13 +4,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import React, { useState, useRef, useEffect } from 'react';
 import { Check } from 'lucide-react';
-import type{ Lobby } from '@/structs';
+import type{ boradcastedLobby } from '@/structs';
 
 
 
 type CreateLobbyProps = {
   createLobby: (name: string, maxPlayers: number, isPrivate: boolean, password: string) => void;
-  lobbies: Lobby[];
+  lobbies: boradcastedLobby[];
 };
 
 export default function mainMenu({createLobby, lobbies}: CreateLobbyProps) {
