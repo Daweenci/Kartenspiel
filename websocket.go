@@ -22,6 +22,17 @@ var (
 	playersLock sync.Mutex
 )
 
+// Helper function to send error responses
+func sendErrorToPlayer(player *Player, errorMsg string) { //could include errorType for more specific json type but for now this is fine
+	err := player.Conn.WriteJSON(map[string]interface{}{
+		"type":  ResponseError,
+		"error": errorMsg,
+	})
+	if err != nil {
+		log.Printf("Failed to send error message to player %s: %v", player.ID, err)
+	}
+}
+
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -92,7 +103,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, msgBytes, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("WebSocket read error:", err)
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				log.Printf("WebSocket error for player %s: %v", player.ID, err)
+			}
 			break
 		}
 
@@ -101,14 +114,17 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := json.Unmarshal(msgBytes, &base); err != nil {
 			log.Println("Invalid message format")
+			sendErrorToPlayer(player, "Invalid message format")
 			continue
 		}
 		log.Println("Received message type:", base.Type)
+
 		switch base.Type {
 		case RequestJoinLobby:
 			var msg JoinLobbyRequest
 			if err := json.Unmarshal(msgBytes, &msg); err != nil {
 				log.Println("Invalid join_lobby message")
+				sendErrorToPlayer(player, "Invalid join_lobby message format")
 				continue
 			}
 			joinLobbyHandler(msg)
@@ -117,6 +133,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			var msg LeaveLobbyRequest
 			if err := json.Unmarshal(msgBytes, &msg); err != nil {
 				log.Println("Invalid leave_lobby message")
+				sendErrorToPlayer(player, "Invalid leave_lobby message format")
 				continue
 			}
 			leaveLobbyHandler(msg)
@@ -125,6 +142,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			var msg CreateLobbyRequest
 			if err := json.Unmarshal(msgBytes, &msg); err != nil {
 				log.Println("Invalid create_lobby message")
+				sendErrorToPlayer(player, "Invalid create_lobby message format")
 				continue
 			}
 			createLobbyHandler(msg)
@@ -133,6 +151,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			var msg StartGame
 			if err := json.Unmarshal(msgBytes, &msg); err != nil {
 				log.Println("Invalid start_game message")
+				sendErrorToPlayer(player, "Invalid start_game message format")
 				continue
 			}
 			startGameHandler(msg)
@@ -141,12 +160,14 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			var msg CancelGame
 			if err := json.Unmarshal(msgBytes, &msg); err != nil {
 				log.Println("Invalid cancel_game message")
+				sendErrorToPlayer(player, "Invalid cancel_game message format")
 				continue
 			}
 			cancelGameHandler(msg)
 
 		default:
 			log.Println("Unknown message type:", base.Type)
+			sendErrorToPlayer(player, "Unknown message type")
 		}
 	}
 }

@@ -11,13 +11,15 @@ const (
 	RequestStartGame   MessageType = "start_game"
 	RequestCancelGame  MessageType = "cancel_game"
 
-	ResponseWelcome          MessageType = "welcome"
-	ResponseLobbyCreated     MessageType = "lobby_created"
-	ResponseLobbyList        MessageType = "lobby_list"
-	ResponseLobbyUpdated     MessageType = "lobby_updated"
-	ResponseJoinLobbySuccess MessageType = "join_lobby_success"
-	ResponseJoinLobbyFailure MessageType = "join_lobby_failure"
-	ResponseLobbyLeft        MessageType = "lobby_left"
+	ResponseWelcome                MessageType = "welcome"
+	ResponseLobbyCreated           MessageType = "lobby_created"
+	ResponseLobbyList              MessageType = "lobby_list"
+	ResponseLobbyUpdated           MessageType = "lobby_updated"
+	ResponseJoinLobbySuccess       MessageType = "join_lobby_success"
+	ResponseJoinLobbyWrongPassword MessageType = "join_lobby_wrong_password"
+	ResponseJoinLobbyFull          MessageType = "join_lobby_full"
+	ResponseLobbyLeft              MessageType = "lobby_left"
+	ResponseError                  MessageType = "error"
 )
 
 type Player struct {

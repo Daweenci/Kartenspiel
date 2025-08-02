@@ -16,7 +16,7 @@ export type yourLobby = {
   gameStart: PlayersStarted[];
 };
 
-export type boradcastedLobby = {
+export type broadcastedLobby = {
   id: string;
   name: string;
   maxPlayers: number;
@@ -38,8 +38,10 @@ export const MessageTypes = {
   ResponseLobbyList: 'lobby_list',
   ResponseLobbyUpdated: 'lobby_updated',
   ResponseJoinLobbySuccess: 'join_lobby_success',
-  ResponseJoinLobbyFailure: 'join_lobby_failure',
+  ResponseJoinLobbyWrongPassword: 'join_lobby_wrong_password',
+  ResponseJoinLobbyFull: 'join_lobby_full',
   ResponseLobbyLeft: 'lobby_left',
+  ResponseError: 'error',
 } as const;
 
 export const Page = {

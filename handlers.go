@@ -33,7 +33,7 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 	// Check lobby capacity
 	if len(lobby.Players) >= lobby.MaxPlayers {
 		player.Conn.WriteJSON(map[string]interface{}{
-			"type": ResponseJoinLobbyFailure,
+			"type": ResponseJoinLobbyFull,
 		})
 		return
 	}
@@ -41,7 +41,7 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 	// Check password
 	if lobby.Password != msg.Password {
 		err := player.Conn.WriteJSON(map[string]interface{}{
-			"type": ResponseJoinLobbyFailure,
+			"type": ResponseJoinLobbyWrongPassword,
 		})
 		if err != nil {
 			log.Println("Error sending join failure response:", err)
