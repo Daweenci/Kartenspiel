@@ -4,6 +4,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import React, { useState, useEffect } from 'react';
+import { toast } from "sonner"
 
 type CreateLobbyModalProps = {
   isOpen: boolean;
@@ -31,12 +32,12 @@ export default function CreateLobbyModal({ isOpen, onClose, onCreateLobby }: Cre
     e.preventDefault();
     
     if (!lobbyName.trim()) {
-      alert('Please enter a lobby name');
+      toast('Please enter a lobby name');
       return;
     }
     
     if (isPrivate && password.trim().length < 4) {
-      alert('Please enter a password with at least 4 characters');
+      toast('Please enter a password with at least 4 characters');
       return;
     }
     

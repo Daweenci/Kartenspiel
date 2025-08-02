@@ -2,6 +2,7 @@
 import { useRef, useEffect } from 'react';
 import type { yourLobby, broadcastedLobby, Player, PageType } from './structs';
 import { MessageTypes, Page } from './structs';
+import { toast } from "sonner"
 
 interface ExtendedWebSocket extends WebSocket {
   _joinLobbyResolve?: (value: boolean) => void;
@@ -60,17 +61,17 @@ export default function useWebSocket({
           }
           break;
         case MessageTypes.ResponseJoinLobbyWrongPassword:
-          alert("Wrong password");
+          toast("Wrong password");
           resolve?.(false);
           delete ws.current!._joinLobbyResolve;
           break;
         case MessageTypes.ResponseJoinLobbyFull:
-          alert("Lobby full");
+          toast("Lobby full");
           resolve?.(false);
           delete ws.current!._joinLobbyResolve;
           break;
         case MessageTypes.ResponseError:
-          alert(data.error);
+          toast(data.error);
           break;
         default:
           console.warn('Unknown message type:', data.type);

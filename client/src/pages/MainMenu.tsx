@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import type { broadcastedLobby } from '@/structs';
 import CreateLobbyModal from './CreateLobbyModal';
 import JoinPasswordModal from './JoinPasswordModal';
+import { toast } from "sonner"
 
 type MainMenuProps = {
   createLobby: (name: string, maxPlayers: number, isPrivate: boolean, password: string) => void;
@@ -23,7 +24,6 @@ export default function MainMenu({ createLobby, joinLobby, lobbies, currentPlaye
       setShowJoinModal(false);
       setSelectedLobbyId('');
     }
-    // If join failed, modal stays open so user can try again
   };
 
   const handleCreateLobby = (name: string, maxPlayers: number, isPrivate: boolean, password: string) => {
@@ -35,13 +35,13 @@ export default function MainMenu({ createLobby, joinLobby, lobbies, currentPlaye
     for (const lobby of lobbies) {
       if (lobby.id === id) {
         if (lobby.players.length >= lobby.maxPlayers) {
-          alert('This lobby is full!');
+          toast('This lobby is full!');
           return;
         }
 
         const isAlreadyInLobby = lobby.players.some(player => player.id === currentPlayerID);
         if (isAlreadyInLobby) {
-          alert('You are already part of the lobby!');
+          toast('You are already part of the lobby!');
           return;
         }
 

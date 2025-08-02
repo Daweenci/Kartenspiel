@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { toast } from "sonner"
 
 type LoginProps = {
   onLogin: (name: string) => void;
@@ -12,7 +13,7 @@ export default function Login({ onLogin }: LoginProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) {
-      alert('Please enter your name');
+      toast('Please enter your name');
       return;
     }
     onLogin(name.trim()); 
