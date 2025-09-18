@@ -32,16 +32,16 @@ export const MessageTypes = {
   RequestCancelGame: 'cancel_game',
 
   //Sent from Client
-  ResponseLoginFailed: 'login_unsuccessful',
-  ResponseLoginSuccess: 'login_successful',
-  ResponseRegisterFailed: 'register_unsuccessful',
-  ResponseRegisterSuccess: 'register_successful',
+  ResponseLoginFailed: 'login_failed',
+  ResponseLoginSuccessful: 'login_successful',
+  ResponseRegisterFailed: 'register_failed',
+  ResponseRegisterSuccessful: 'register_successful',
   ResponseWelcome: 'welcome',
   ResponseLobbyCreated: 'lobby_created',
   ResponseLobbyList: 'lobby_list',
   ResponseLobbyUpdated: 'lobby_updated',
-  ResponseJoinLobbySuccess: 'join_lobby_successful',
-  ResponseJoinLobbyUnsuccessful: 'join_lobby_unsuccessful',
+  ResponseJoinLobbySuccessful: 'join_lobby_successful',
+  ResponseJoinLobbyFailed: 'join_lobby_failed',
   ResponseLobbyLeft: 'lobby_left',
   ResponseError: 'error',
 } as const;
@@ -60,5 +60,4 @@ export type PageType = typeof Page[keyof typeof Page];
 
 type PlayersStarted = {
   playerID: string;
-  gameStarted: boolean;
 };

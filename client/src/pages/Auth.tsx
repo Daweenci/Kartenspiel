@@ -38,7 +38,8 @@ export default function Auth({ connectWebSocket }: AuthProps) {
 
   async function onRegister(name: string, password: string) {
     try {
-      const response = await fetch(`${process.env.REACT_APP_WS_URL}/register`, {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+      const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -64,7 +65,8 @@ export default function Auth({ connectWebSocket }: AuthProps) {
 
   async function onLogin(name: string, password: string) {
     try {
-      const response = await fetch(`${process.env.REACT_APP_WS_URL}/login`, {
+      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+      const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

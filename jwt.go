@@ -1,6 +1,12 @@
 package main
 
-// JWT helpers
+import (
+	"fmt"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+)
+
 func generateJWT(playerID string) (string, error) {
 	claims := jwt.MapClaims{
 		"playerID": playerID,

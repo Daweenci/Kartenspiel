@@ -1,4 +1,4 @@
-// useGameWebSocket.ts
+// useGameWebSocket.ts - Updated version with Authorization header
 import { useRef, useEffect } from 'react';
 import type { yourLobby, broadcastedLobby, Player, PageType } from './structs';
 import { MessageTypes, Page } from './structs';
@@ -18,7 +18,6 @@ export default function useWebSocket({
   onSetPage,
 }: UseWebSocketProps) {
   const ws = useRef<WebSocket | null>(null);
-
   const tokenRef = useRef<string | null>(null);
 
   const setAuthToken = (token: string) => {
@@ -56,12 +55,25 @@ export default function useWebSocket({
     const token = getAuthToken();
     if (!token) {
       console.error('No auth token found. Cannot connect WebSocket.');
+      toast('Please log in first');
+      onSetPage(Page.Auth);
       return;
     }
 
-    ws.current = new WebSocket(process.env.REACT_APP_WS_URL || 'ws://localhost:4000/ws');
+    const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:4000/ws';
+    
+    ws.current = new WebSocket(wsUrl);
 
-    ws.current.onopen = () => console.log('WebSocket connected');
+    ws.current.onopen = () => {
+      console.log('WebSocket connected');
+      // Send authentication as first message
+      if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+        ws.current.send(JSON.stringify({
+          type: 'authenticate',
+          token: token
+        }));
+      }
+    };
 
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
@@ -70,7 +82,8 @@ export default function useWebSocket({
         case MessageTypes.ResponseWelcome:
           onSetPlayer(data.player);
           onSetPage(Page.MainMenu);
-          toast(data.message);
+          if (data.message) toast(data.message);
+          if (data.lobbies) onSetLobbies(data.lobbies);
           break;
 
         case MessageTypes.ResponseLobbyList:
@@ -80,13 +93,13 @@ export default function useWebSocket({
         case MessageTypes.ResponseLobbyCreated:
           onSetLobby(data.lobby);
           onSetPage(Page.InLobby);
-          toast(data.message);
+          toast('Lobby created successfully');
           break;
 
-        case MessageTypes.ResponseJoinLobbySuccess:
+        case MessageTypes.ResponseJoinLobbySuccessful:
           onSetLobby(data.lobby);
           onSetPage(Page.InLobby);
-          toast(data.message);
+          toast('Joined lobby successfully');
           break;
 
         case MessageTypes.ResponseLobbyUpdated:
@@ -99,7 +112,12 @@ export default function useWebSocket({
           break;
 
         case MessageTypes.ResponseError:
-          toast(data.error);
+          toast(data.error || 'An error occurred');
+          // If auth error, redirect to login
+          if (data.error?.includes('token') || data.error?.includes('auth')) {
+            clearAuthToken();
+            onSetPage(Page.Auth);
+          }
           break;
 
         default:
@@ -107,33 +125,49 @@ export default function useWebSocket({
       }
     };
 
-    ws.current.onerror = (err) => console.error('WebSocket error:', err);
-    ws.current.onclose = () => {
-      console.log('WebSocket closed');
+    ws.current.onerror = (err) => {
+      console.error('WebSocket error:', err);
+      toast('Connection error');
+    };
+
+    ws.current.onclose = (event) => {
+      console.log('WebSocket closed', event.code, event.reason);
       onSetPlayer({} as Player);
+      
+      // If closed due to auth issues, redirect to login
+      if (event.code === 1008 || event.code === 1011) {
+        clearAuthToken();
+        onSetPage(Page.Auth);
+        toast('Authentication failed, please log in again');
+      }
     };
   };
 
   const sendMessage = (msg: any) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      const token = getAuthToken();
-      ws.current.send(JSON.stringify({ ...msg, token }));
+      // No need to send token with every message since we're authenticated
+      ws.current.send(JSON.stringify(msg));
     } else {
       console.error('WebSocket is not connected');
+      toast('Connection lost, please refresh');
     }
   };
-  // Lobby / game actions
+
+  // Lobby / game actions - simplified since we don't need to send token
   const createLobby = (lobbyName: string, maxPlayers: number, isPrivate: boolean, password: string) =>
     sendMessage({ type: MessageTypes.RequestCreateLobby, lobbyName, maxPlayers, isPrivate, password });
 
   const joinLobby = (lobbyID: string, password: string) =>
     sendMessage({ type: MessageTypes.RequestJoinLobby, lobbyID, password });
 
-  const leaveLobby = (lobbyID: string) => sendMessage({ type: MessageTypes.RequestLeaveLobby, lobbyID });
+  const leaveLobby = (lobbyID: string) => 
+    sendMessage({ type: MessageTypes.RequestLeaveLobby, lobbyID });
 
-  const startGame = (lobbyID: string) => sendMessage({ type: MessageTypes.RequestStartGame, lobbyID });
+  const startGame = (lobbyID: string) => 
+    sendMessage({ type: MessageTypes.RequestStartGame, lobbyID });
 
-  const cancelGame = (lobbyID: string) => sendMessage({ type: MessageTypes.RequestCancelGame, lobbyID });
+  const cancelGame = (lobbyID: string) => 
+    sendMessage({ type: MessageTypes.RequestCancelGame, lobbyID });
 
   const logout = () => {
     clearAuthToken();
@@ -141,7 +175,7 @@ export default function useWebSocket({
     onSetPlayer({} as Player);
     onSetLobby({} as yourLobby);
     onSetLobbies([]);
-    onSetPage(Page.MainMenu);
+    onSetPage(Page.Auth);
   };
 
   return {
