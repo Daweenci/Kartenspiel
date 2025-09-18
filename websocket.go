@@ -1,3 +1,4 @@
+// websocket.go (updated sections)
 package main
 
 import (
@@ -14,11 +15,12 @@ import (
 )
 
 var (
-	lobbies     = make(map[string]*Lobby)
+	lobbies = make(map[string]*Lobby)
 	lobbiesLock sync.Mutex
 
-	players     = make(map[string]*Player)
-	playersLock sync.Mutex
+	// Keep active connections in memory for real-time communication
+	activeConnections     = make(map[string]*Player)
+	activeConnectionsLock sync.Mutex
 
 	upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -29,36 +31,6 @@ var (
 	jwtSecret = []byte("YOUR_SECRET_KEY")
 )
 
-// JWT helpers
-func generateJWT(playerID string) (string, error) {
-	claims := jwt.MapClaims{
-		"playerID": playerID,
-		"exp":      time.Now().Add(24 * time.Hour).Unix(),
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString(jwtSecret)
-}
-
-func parseJWT(tokenString string) (string, error) {
-	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		return jwtSecret, nil
-	})
-	if err != nil || !token.Valid {
-		return "", fmt.Errorf("invalid token: %v", err)
-	}
-
-	claims := token.Claims.(jwt.MapClaims)
-	playerID, ok := claims["playerID"].(string)
-	if !ok {
-		return "", fmt.Errorf("invalid token claims")
-	}
-	return playerID, nil
-}
-
-// Send error to player helper
 func sendErrorToPlayer(player *Player, errorMsg string) {
 	err := player.Conn.WriteJSON(map[string]interface{}{
 		"type":  ResponseError,
@@ -83,20 +55,19 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		Conn: conn,
 	}
 
-	// Add player to global map
-	playersLock.Lock()
-	players[player.ID] = player
-	playersLock.Unlock()
+	activeConnectionsLock.Lock()
+	activeConnections[player.ID] = player
+	activeConnectionsLock.Unlock()
 
-	// Cleanup on disconnect
 	defer func() {
 		conn.Close()
 		log.Println("Connection closed for player:", player.ID)
 
-		playersLock.Lock()
-		defer playersLock.Unlock()
+		activeConnectionsLock.Lock()
+		defer activeConnectionsLock.Unlock()
 
-		// Remove player from lobbies
+		// Remove player from lobbies (different from inGameLobby)
+		lobbiesLock.Lock()
 		for _, lobby := range lobbies {
 			for i, p := range lobby.Players {
 				if p.ID == player.ID {
@@ -108,12 +79,12 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
+		lobbiesLock.Unlock()
 
-		delete(players, player.ID)
+		delete(activeConnections, player.ID)
 		broadcastLobbies()
 	}()
 
-	// Send initial lobby list
 	lobbiesLock.Lock()
 	responseLobbies := make([]BroadcastedLobby, 0, len(lobbies))
 	for _, l := range lobbies {
@@ -143,7 +114,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
-		// Base message to read type and token
 		var base struct {
 			Type  MessageType `json:"type"`
 			Token string      `json:"token"`
@@ -154,121 +124,78 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		// Require JWT for all actions except login/register
 		if base.Type != RequestLogin && base.Type != RequestRegister {
 			playerID, err := parseJWT(base.Token)
 			if err != nil {
 				sendErrorToPlayer(player, "Invalid or expired token")
 				continue
 			}
-			// ensure player exists
-			playersLock.Lock()
-			authPlayer, ok := players[playerID]
-			playersLock.Unlock()
+			
+			activeConnectionsLock.Lock()
+			authPlayer, ok := activeConnections[playerID]
+			activeConnectionsLock.Unlock()
+			
 			if !ok {
-				sendErrorToPlayer(player, "Player not found")
-				continue
+				dbPlayer, err := getPlayerByID(playerID)
+				if err != nil {
+					sendErrorToPlayer(player, "Player not found")
+					continue
+				}
+				
+				player.ID = dbPlayer.ID
+				player.Name = dbPlayer.Username
+				
+				activeConnectionsLock.Lock()
+				activeConnections[player.ID] = player
+				activeConnectionsLock.Unlock()
+			} else {
+				player = authPlayer
 			}
-			player = authPlayer
 		}
 
 		switch base.Type {
-		case RequestLogin:
-			var msg LoginRequest
-			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				sendErrorToPlayer(player, "Invalid login message")
-				continue
-			}
-			if !checkCredentials(msg.Name, msg.Password) {
-				conn.WriteJSON(map[string]interface{}{
-					"type":    ResponseLoginUnsuccessful,
-					"message": "Invalid username or password",
-				})
-				continue
-			}
-			token, err := generateJWT(player.ID)
-			if err != nil {
-				sendErrorToPlayer(player, "Failed to generate token")
-				continue
-			}
-			conn.WriteJSON(map[string]interface{}{
-				"type":  ResponseLoginSuccess,
-				"token": token,
-			})
+			case RequestJoinLobby:
+				var msg JoinLobbyRequest
+				if err := json.Unmarshal(msgBytes, &msg); err != nil {
+					sendErrorToPlayer(player, "Invalid join_lobby message")
+					continue
+				}
+				joinLobbyHandler(msg)
 
-		case RequestRegister:
-			var msg RegisterRequest
-			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				sendErrorToPlayer(player, "Invalid register message")
-				continue
-			}
-			if !registerPlayer(msg.Name, msg.Password) {
-				conn.WriteJSON(map[string]interface{}{
-					"type":    ResponseRegisterFailed,
-					"message": "Username already exists",
-				})
-				continue
-			}
-			token, err := generateJWT(player.ID)
-			if err != nil {
-				sendErrorToPlayer(player, "Failed to generate token")
-				continue
-			}
-			conn.WriteJSON(map[string]interface{}{
-				"type":  ResponseRegisterSuccess,
-				"token": token,
-			})
+			case RequestLeaveLobby:
+				var msg LeaveLobbyRequest
+				if err := json.Unmarshal(msgBytes, &msg); err != nil {
+					sendErrorToPlayer(player, "Invalid leave_lobby message")
+					continue
+				}
+				leaveLobbyHandler(msg)
 
-		case RequestJoinLobby:
-			var msg JoinLobbyRequest
-			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				sendErrorToPlayer(player, "Invalid join_lobby message")
-				continue
-			}
-			joinLobbyHandler(msg)
+			case RequestCreateLobby:
+				var msg CreateLobbyRequest
+				if err := json.Unmarshal(msgBytes, &msg); err != nil {
+					sendErrorToPlayer(player, "Invalid create_lobby message")
+					continue
+				}
+				createLobbyHandler(msg)
 
-		case RequestLeaveLobby:
-			var msg LeaveLobbyRequest
-			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				sendErrorToPlayer(player, "Invalid leave_lobby message")
-				continue
-			}
-			leaveLobbyHandler(msg)
+			case RequestStartGame:
+				var msg StartGame
+				if err := json.Unmarshal(msgBytes, &msg); err != nil {
+					sendErrorToPlayer(player, "Invalid start_game message")
+					continue
+				}
+				startGameHandler(msg)
 
-		case RequestCreateLobby:
-			var msg CreateLobbyRequest
-			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				sendErrorToPlayer(player, "Invalid create_lobby message")
-				continue
-			}
-			createLobbyHandler(msg)
+			case RequestCancelGame:
+				var msg CancelGame
+				if err := json.Unmarshal(msgBytes, &msg); err != nil {
+					sendErrorToPlayer(player, "Invalid cancel_game message")
+					continue
+				}
+				cancelGameHandler(msg)
 
-		case RequestStartGame:
-			var msg StartGame
-			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				sendErrorToPlayer(player, "Invalid start_game message")
-				continue
-			}
-			startGameHandler(msg)
-
-		case RequestCancelGame:
-			var msg CancelGame
-			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				sendErrorToPlayer(player, "Invalid cancel_game message")
-				continue
-			}
-			cancelGameHandler(msg)
-
-		default:
-			sendErrorToPlayer(player, "Unknown message type")
+			default:
+				sendErrorToPlayer(player, "Unknown message type")
 		}
 	}
-}
-
-func registerPlayer(name string, password string) bool {
-	panic("unimplemented")
-}
-
-func checkCredentials(name, password string) bool {
-	panic("unimplemented")
 }

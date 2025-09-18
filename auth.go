@@ -6,80 +6,71 @@ import (
 )
 
 type AuthResponse struct {
-	Token   string `json:"token,omitempty"`
-	Message string `json:"message,omitempty"`
+	Token   string      `json:"token,omitempty"`
+	Message string      `json:"message,omitempty"`
+	Type    MessageType `json:"type,omitempty"`
 }
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
-	// Parse the JSON request body
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(AuthResponse{Message: "Invalid request"})
+		json.NewEncoder(w).Encode(AuthResponse{Type: ResponseLoginFailed, Message: "Invalid request"})
 		return
 	}
 
-	// Validate input
 	if req.Name == "" || req.Password == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(AuthResponse{Message: "Username and password required"})
+		json.NewEncoder(w).Encode(AuthResponse{Type: ResponseLoginFailed, Message: "Username and password required"})
 		return
 	}
 
-	// Check credentials (replace with your DB lookup)
-	if !checkCredentials(req.Name, req.Password) {
+	playerID, err := authenticatePlayer(req.Name, req.Password)
+	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(AuthResponse{Message: "Invalid username or password"})
+		json.NewEncoder(w).Encode(AuthResponse{Type: ResponseLoginFailed, Message: "Invalid username or password"})
 		return
 	}
 
-	// Generate JWT
-	playerID := "examplePlayerID" // replace with real player ID from DB
 	token, err := generateJWT(playerID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(AuthResponse{Message: "Failed to generate token"})
+		json.NewEncoder(w).Encode(AuthResponse{Type: ResponseLoginFailed, Message: "Failed to generate token"})
 		return
 	}
 
-	// Send JSON response with token
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(AuthResponse{Token: token, Message: "Login successful"})
+	json.NewEncoder(w).Encode(AuthResponse{Token: token, Type: ResponseLoginSuccessful, Message: "Login successful"})
 }
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
-	// Parse the JSON request body
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(AuthResponse{Message: "Invalid request"})
+		json.NewEncoder(w).Encode(AuthResponse{Type: ResponseRegisterFailed, Message: "Invalid request"})
 		return
 	}
 
-	// Validate input
 	if req.Name == "" || req.Password == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(AuthResponse{Message: "Username and password required"})
+		json.NewEncoder(w).Encode(AuthResponse{Type: ResponseRegisterFailed, Message: "Username and password required"})
 		return
 	}
 
-	// Check if username already exists
-	if !registerPlayer(req.Name, req.Password) {
+	playerID, err := registerPlayer(req.Name, req.Password)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(AuthResponse{Message: "Username already exists"})
+		json.NewEncoder(w).Encode(AuthResponse{Type: ResponseRegisterFailed, Message: err.Error()})
 		return
 	}
 
-	// Generate JWT for new user
-	playerID := "exampleNewPlayerID" // replace with real player ID from DB
 	token, err := generateJWT(playerID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(AuthResponse{Message: "Failed to generate token"})
+		json.NewEncoder(w).Encode(AuthResponse{Type: ResponseRegisterFailed, Message: "Failed to generate token"})
 		return
 	}
 
-	// Send JSON response with token
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(AuthResponse{Token: token, Message: "Registration successful"})
+	json.NewEncoder(w).Encode(AuthResponse{Token: token, Type: ResponseRegisterSuccessful, Message: "Registration successful"})
 }

@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Login from './pages/Auth';
 import MainMenu from './pages/MainMenu';
 import GameOfTwo from './pages/GameOfTwo';
 import GameOfThree from './pages/GameOfThree';

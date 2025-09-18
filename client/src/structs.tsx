@@ -48,12 +48,12 @@ export const MessageTypes = {
 
 export const Page = {
   Auth: 'auth',
-  MainMenu: 'mainmenu',
-  InLobby: 'inlobby',
-  GameOfTwo: 'gameoftwo',
-  GameOfThree: 'gameofthree',
-  GameOfFour: 'gameoffour',
-  LobbyScreen: 'lobbyscreen',
+  MainMenu: 'main_menu',
+  InLobby: 'in_lobby',
+  GameOfTwo: 'game_of_two',
+  GameOfThree: 'game_of_three',
+  GameOfFour: 'game_of_four',
+  LobbyScreen: 'lobby_screen',
 } as const;
 
 export type PageType = typeof Page[keyof typeof Page];
