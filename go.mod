@@ -5,6 +5,7 @@ go 1.24.3
 require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/gofiber/fiber/v2 v2.52.8 // indirect
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/klauspost/compress v1.18.0 // indirect

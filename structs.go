@@ -5,27 +5,44 @@ import "github.com/gorilla/websocket"
 type MessageType string
 
 const (
+	RequestLogin       MessageType = "login"
+	RequestRegister    MessageType = "register"
 	RequestCreateLobby MessageType = "create_lobby"
 	RequestJoinLobby   MessageType = "join_lobby"
 	RequestLeaveLobby  MessageType = "leave_lobby"
 	RequestStartGame   MessageType = "start_game"
 	RequestCancelGame  MessageType = "cancel_game"
 
-	ResponseWelcome                MessageType = "welcome"
-	ResponseLobbyCreated           MessageType = "lobby_created"
-	ResponseLobbyList              MessageType = "lobby_list"
-	ResponseLobbyUpdated           MessageType = "lobby_updated"
-	ResponseJoinLobbySuccess       MessageType = "join_lobby_success"
-	ResponseJoinLobbyWrongPassword MessageType = "join_lobby_wrong_password"
-	ResponseJoinLobbyFull          MessageType = "join_lobby_full"
-	ResponseLobbyLeft              MessageType = "lobby_left"
-	ResponseError                  MessageType = "error"
+	ResponseWelcome               MessageType = "welcome"
+	ResponseLoginSuccess          MessageType = "login_successful"
+	ResponseLoginUnsuccessful     MessageType = "login_unsuccessful"
+	ResponseRegisterSuccess       MessageType = "register_successful"
+	ResponseRegisterFailed        MessageType = "register_unsuccessful"
+	ResponseLobbyCreated          MessageType = "lobby_created"
+	ResponseLobbyList             MessageType = "lobby_list"
+	ResponseLobbyUpdated          MessageType = "lobby_updated"
+	ResponseJoinLobbySuccess      MessageType = "join_lobby_successful"
+	ResponseJoinLobbyUnsuccessful MessageType = "join_lobby_unsuccessful"
+	ResponseLobbyLeft             MessageType = "lobby_left"
+	ResponseError                 MessageType = "error"
 )
 
 type Player struct {
 	ID   string          `json:"id"`
 	Name string          `json:"name"`
 	Conn *websocket.Conn `json:"-"`
+}
+
+type LoginRequest struct {
+	Type     MessageType `json:"type"`
+	Name     string      `json:"name"`
+	Password string      `json:"password"`
+}
+
+type RegisterRequest struct {
+	Type     MessageType `json:"type"`
+	Name     string      `json:"name"`
+	Password string      `json:"password"`
 }
 
 type JoinLobbyRequest struct {

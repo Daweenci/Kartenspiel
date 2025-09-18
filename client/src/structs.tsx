@@ -1,6 +1,3 @@
-
-
-
 export type Player = {
 	name: string;
 	id:   string;
@@ -26,6 +23,8 @@ export type broadcastedLobby = {
 
 export const MessageTypes = {
   //Sent from Server
+  RequestLogin: 'login',
+  RequestRegister: 'register',
   RequestCreateLobby: 'create_lobby',
   RequestJoinLobby: 'join_lobby',
   RequestLeaveLobby: 'leave_lobby',
@@ -33,19 +32,22 @@ export const MessageTypes = {
   RequestCancelGame: 'cancel_game',
 
   //Sent from Client
+  ResponseLoginFailed: 'login_unsuccessful',
+  ResponseLoginSuccess: 'login_successful',
+  ResponseRegisterFailed: 'register_unsuccessful',
+  ResponseRegisterSuccess: 'register_successful',
   ResponseWelcome: 'welcome',
   ResponseLobbyCreated: 'lobby_created',
   ResponseLobbyList: 'lobby_list',
   ResponseLobbyUpdated: 'lobby_updated',
-  ResponseJoinLobbySuccess: 'join_lobby_success',
-  ResponseJoinLobbyWrongPassword: 'join_lobby_wrong_password',
-  ResponseJoinLobbyFull: 'join_lobby_full',
+  ResponseJoinLobbySuccess: 'join_lobby_successful',
+  ResponseJoinLobbyUnsuccessful: 'join_lobby_unsuccessful',
   ResponseLobbyLeft: 'lobby_left',
   ResponseError: 'error',
 } as const;
 
 export const Page = {
-  Login: 'login',
+  Auth: 'auth',
   MainMenu: 'mainmenu',
   InLobby: 'inlobby',
   GameOfTwo: 'gameoftwo',

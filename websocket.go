@@ -2,10 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
@@ -13,17 +16,50 @@ import (
 var (
 	lobbies     = make(map[string]*Lobby)
 	lobbiesLock sync.Mutex
-	upgrader    = websocket.Upgrader{
+
+	players     = make(map[string]*Player)
+	playersLock sync.Mutex
+
+	upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
-	players     = make(map[string]*Player)
-	playersLock sync.Mutex
+
+	jwtSecret = []byte("YOUR_SECRET_KEY")
 )
 
-// Helper function to send error responses
-func sendErrorToPlayer(player *Player, errorMsg string) { //could include errorType for more specific json type but for now this is fine
+// JWT helpers
+func generateJWT(playerID string) (string, error) {
+	claims := jwt.MapClaims{
+		"playerID": playerID,
+		"exp":      time.Now().Add(24 * time.Hour).Unix(),
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(jwtSecret)
+}
+
+func parseJWT(tokenString string) (string, error) {
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return jwtSecret, nil
+	})
+	if err != nil || !token.Valid {
+		return "", fmt.Errorf("invalid token: %v", err)
+	}
+
+	claims := token.Claims.(jwt.MapClaims)
+	playerID, ok := claims["playerID"].(string)
+	if !ok {
+		return "", fmt.Errorf("invalid token claims")
+	}
+	return playerID, nil
+}
+
+// Send error to player helper
+func sendErrorToPlayer(player *Player, errorMsg string) {
 	err := player.Conn.WriteJSON(map[string]interface{}{
 		"type":  ResponseError,
 		"error": errorMsg,
@@ -47,35 +83,37 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		Conn: conn,
 	}
 
-	defer func() {
-		conn.Close()
-		log.Println("Connection closed for player:", player.ID)
-		playersLock.Lock()
-		var breakLoop = false
-		for _, lobby := range lobbies {
-			for index, compPlayer := range lobby.Players {
-				if compPlayer.ID == player.ID {
-					lobby.Players = append(lobby.Players[:index], lobby.Players[index+1:]...)
-					if len(lobby.Players) == 0 {
-						delete(lobbies, lobby.ID)
-					}
-					breakLoop = true
-					break
-				}
-			}
-			if breakLoop {
-				break
-			}
-		}
-		delete(players, player.ID)
-		playersLock.Unlock()
-		broadcastLobbies()
-	}()
-
+	// Add player to global map
 	playersLock.Lock()
 	players[player.ID] = player
 	playersLock.Unlock()
 
+	// Cleanup on disconnect
+	defer func() {
+		conn.Close()
+		log.Println("Connection closed for player:", player.ID)
+
+		playersLock.Lock()
+		defer playersLock.Unlock()
+
+		// Remove player from lobbies
+		for _, lobby := range lobbies {
+			for i, p := range lobby.Players {
+				if p.ID == player.ID {
+					lobby.Players = append(lobby.Players[:i], lobby.Players[i+1:]...)
+					if len(lobby.Players) == 0 {
+						delete(lobbies, lobby.ID)
+					}
+					break
+				}
+			}
+		}
+
+		delete(players, player.ID)
+		broadcastLobbies()
+	}()
+
+	// Send initial lobby list
 	lobbiesLock.Lock()
 	responseLobbies := make([]BroadcastedLobby, 0, len(lobbies))
 	for _, l := range lobbies {
@@ -89,16 +127,12 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	lobbiesLock.Unlock()
 
-	err = conn.WriteJSON(map[string]interface{}{
+	conn.WriteJSON(map[string]interface{}{
 		"type":    ResponseWelcome,
 		"name":    player.Name,
 		"id":      player.ID,
 		"lobbies": responseLobbies,
 	})
-	if err != nil {
-		log.Println("Error sending welcome message:", err)
-		return
-	}
 
 	for {
 		_, msgBytes, err := conn.ReadMessage()
@@ -109,22 +143,86 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 
+		// Base message to read type and token
 		var base struct {
-			Type MessageType `json:"type"`
+			Type  MessageType `json:"type"`
+			Token string      `json:"token"`
 		}
 		if err := json.Unmarshal(msgBytes, &base); err != nil {
 			log.Println("Invalid message format")
 			sendErrorToPlayer(player, "Invalid message format")
 			continue
 		}
-		log.Println("Received message type:", base.Type)
+
+		// Require JWT for all actions except login/register
+		if base.Type != RequestLogin && base.Type != RequestRegister {
+			playerID, err := parseJWT(base.Token)
+			if err != nil {
+				sendErrorToPlayer(player, "Invalid or expired token")
+				continue
+			}
+			// ensure player exists
+			playersLock.Lock()
+			authPlayer, ok := players[playerID]
+			playersLock.Unlock()
+			if !ok {
+				sendErrorToPlayer(player, "Player not found")
+				continue
+			}
+			player = authPlayer
+		}
 
 		switch base.Type {
+		case RequestLogin:
+			var msg LoginRequest
+			if err := json.Unmarshal(msgBytes, &msg); err != nil {
+				sendErrorToPlayer(player, "Invalid login message")
+				continue
+			}
+			if !checkCredentials(msg.Name, msg.Password) {
+				conn.WriteJSON(map[string]interface{}{
+					"type":    ResponseLoginUnsuccessful,
+					"message": "Invalid username or password",
+				})
+				continue
+			}
+			token, err := generateJWT(player.ID)
+			if err != nil {
+				sendErrorToPlayer(player, "Failed to generate token")
+				continue
+			}
+			conn.WriteJSON(map[string]interface{}{
+				"type":  ResponseLoginSuccess,
+				"token": token,
+			})
+
+		case RequestRegister:
+			var msg RegisterRequest
+			if err := json.Unmarshal(msgBytes, &msg); err != nil {
+				sendErrorToPlayer(player, "Invalid register message")
+				continue
+			}
+			if !registerPlayer(msg.Name, msg.Password) {
+				conn.WriteJSON(map[string]interface{}{
+					"type":    ResponseRegisterFailed,
+					"message": "Username already exists",
+				})
+				continue
+			}
+			token, err := generateJWT(player.ID)
+			if err != nil {
+				sendErrorToPlayer(player, "Failed to generate token")
+				continue
+			}
+			conn.WriteJSON(map[string]interface{}{
+				"type":  ResponseRegisterSuccess,
+				"token": token,
+			})
+
 		case RequestJoinLobby:
 			var msg JoinLobbyRequest
 			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				log.Println("Invalid join_lobby message")
-				sendErrorToPlayer(player, "Invalid join_lobby message format")
+				sendErrorToPlayer(player, "Invalid join_lobby message")
 				continue
 			}
 			joinLobbyHandler(msg)
@@ -132,8 +230,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		case RequestLeaveLobby:
 			var msg LeaveLobbyRequest
 			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				log.Println("Invalid leave_lobby message")
-				sendErrorToPlayer(player, "Invalid leave_lobby message format")
+				sendErrorToPlayer(player, "Invalid leave_lobby message")
 				continue
 			}
 			leaveLobbyHandler(msg)
@@ -141,8 +238,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		case RequestCreateLobby:
 			var msg CreateLobbyRequest
 			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				log.Println("Invalid create_lobby message")
-				sendErrorToPlayer(player, "Invalid create_lobby message format")
+				sendErrorToPlayer(player, "Invalid create_lobby message")
 				continue
 			}
 			createLobbyHandler(msg)
@@ -150,8 +246,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		case RequestStartGame:
 			var msg StartGame
 			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				log.Println("Invalid start_game message")
-				sendErrorToPlayer(player, "Invalid start_game message format")
+				sendErrorToPlayer(player, "Invalid start_game message")
 				continue
 			}
 			startGameHandler(msg)
@@ -159,15 +254,21 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		case RequestCancelGame:
 			var msg CancelGame
 			if err := json.Unmarshal(msgBytes, &msg); err != nil {
-				log.Println("Invalid cancel_game message")
-				sendErrorToPlayer(player, "Invalid cancel_game message format")
+				sendErrorToPlayer(player, "Invalid cancel_game message")
 				continue
 			}
 			cancelGameHandler(msg)
 
 		default:
-			log.Println("Unknown message type:", base.Type)
 			sendErrorToPlayer(player, "Unknown message type")
 		}
 	}
+}
+
+func registerPlayer(name string, password string) bool {
+	panic("unimplemented")
+}
+
+func checkCredentials(name, password string) bool {
+	panic("unimplemented")
 }

@@ -8,27 +8,22 @@ import { toast } from "sonner"
 
 type MainMenuProps = {
   createLobby: (name: string, maxPlayers: number, isPrivate: boolean, password: string) => void;
-  joinLobby: (id: string, joinPassword: string) => Promise<boolean> | boolean; // Should return success status
+  joinLobby: (id: string, joinPassword: string) => void; 
   lobbies: broadcastedLobby[];
   currentPlayerID: string;
 };
 
-export default function MainMenu({ createLobby, joinLobby, lobbies, currentPlayerID }: MainMenuProps) {
+export default function MainMenu({ createLobby, joinLobby, lobbies }: MainMenuProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [selectedLobbyId, setSelectedLobbyId] = useState('');
 
-  const handleJoinLobby = async (id: string, password: string) => {
-    const success = await joinLobby(id, password);
-    if (success) {
-      setShowJoinModal(false);
-      setSelectedLobbyId('');
-    }
+  const handleJoinLobby = (lobbyID: string, password: string) => {
+    joinLobby(lobbyID, password);
   };
 
   const handleCreateLobby = (name: string, maxPlayers: number, isPrivate: boolean, password: string) => {
     createLobby(name, maxPlayers, isPrivate, password);
-    setShowCreateModal(false);
   };
 
   const joinLobbyAccess = (id: string) => {
@@ -36,12 +31,6 @@ export default function MainMenu({ createLobby, joinLobby, lobbies, currentPlaye
       if (lobby.id === id) {
         if (lobby.players.length >= lobby.maxPlayers) {
           toast('This lobby is full!');
-          return;
-        }
-
-        const isAlreadyInLobby = lobby.players.some(player => player.id === currentPlayerID);
-        if (isAlreadyInLobby) {
-          toast('You are already part of the lobby!');
           return;
         }
 

@@ -13,12 +13,14 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 	lobby, ok := lobbies[msg.LobbyID]
 	if !ok {
 		log.Println("joinLobbyHandler: Lobby not found")
+		// Lobby not found, silently ignore or send a success response if needed
 		return
 	}
 
 	player, ok := players[msg.PlayerID]
 	if !ok {
 		log.Println("joinLobbyHandler: Player not found")
+		// Player not found, silently ignore or send a success response if needed
 		return
 	}
 
@@ -33,7 +35,8 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 	// Check lobby capacity
 	if len(lobby.Players) >= lobby.MaxPlayers {
 		player.Conn.WriteJSON(map[string]interface{}{
-			"type": ResponseJoinLobbyFull,
+			"type":    ResponseJoinLobbyUnsuccessful,
+			"message": "Lobby is full",
 		})
 		return
 	}
@@ -41,7 +44,8 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 	// Check password
 	if lobby.Password != msg.Password {
 		err := player.Conn.WriteJSON(map[string]interface{}{
-			"type": ResponseJoinLobbyWrongPassword,
+			"type":    ResponseJoinLobbyUnsuccessful,
+			"message": "Incorrect password",
 		})
 		if err != nil {
 			log.Println("Error sending join failure response:", err)

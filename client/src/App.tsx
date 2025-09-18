@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Login from './pages/Login';
+import Login from './pages/Auth';
 import MainMenu from './pages/MainMenu';
 import GameOfTwo from './pages/GameOfTwo';
 import GameOfThree from './pages/GameOfThree';
@@ -9,12 +9,13 @@ import type { yourLobby, broadcastedLobby, PageType, Player } from './structs';
 import { Page } from './structs';
 import useWebSocket from './useWebSocket';
 import { Toaster } from 'sonner';
+import Auth from './pages/Auth';
 
 export default function App() {
   const [player, setPlayer] = useState<Player>({} as Player);
   const [broadcastedLobbies, setbroadcastedLobbies] = useState<broadcastedLobby[]>([]);
   const [lobby, setLobby] = useState<yourLobby>({} as yourLobby);
-  const [currentPage, setCurrentPage] = useState<PageType>(Page.Login);
+  const [currentPage, setCurrentPage] = useState<PageType>(Page.Auth);
 
   const {
     connect,
@@ -29,22 +30,20 @@ export default function App() {
     onSetLobbies: setbroadcastedLobbies,
     onSetPage: setCurrentPage,
   });
-
-  const handleLogin = (name: string) => connect(name);
-  const handleCreateLobby = (name: string, max: number, priv: boolean, pass: string) =>
-    createLobby(name, max, priv, pass, player);
-  const handleStartGame = () => startGame(lobby.id, player.id);
-  const handleCancelGame = () => cancelGame(lobby.id, player.id);
-  const handleLeaveLobby = () => leaveLobby(lobby.id, player.id);
-  const handleJoinLobby = (id: string, pass: string) => joinLobby(id, pass, player.id);
+  const handleConnectWebSocket = () => { connect(); };
+  const handleCreateLobby = (name: string, max: number, priv: boolean, pass: string) => createLobby(name, max, priv, pass);
+  const handleStartGame = () => startGame(lobby.id);
+  const handleCancelGame = () => cancelGame(lobby.id);
+  const handleLeaveLobby = () => leaveLobby(lobby.id);
+  const handleJoinLobby = (lobbyID: string, lobbyPassword: string) => joinLobby(lobbyID, lobbyPassword);
 
   return (
     <>
     <Toaster />
       {(() => {
         switch (currentPage) {
-          case Page.Login:
-            return <Login onLogin={handleLogin} />;
+          case Page.Auth:
+            return <Auth connectWebSocket={handleConnectWebSocket} />;
           case Page.MainMenu:
             return (
               <MainMenu
