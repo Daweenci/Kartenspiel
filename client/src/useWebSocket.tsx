@@ -69,7 +69,7 @@ export default function useWebSocket({
       // Send authentication as first message
       if (ws.current && ws.current.readyState === WebSocket.OPEN) {
         ws.current.send(JSON.stringify({
-          type: 'authenticate',
+          type: MessageTypes.RequestAuthentication,
           token: token
         }));
       }

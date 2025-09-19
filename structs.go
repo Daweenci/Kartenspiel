@@ -5,13 +5,14 @@ import "github.com/gorilla/websocket"
 type MessageType string
 
 const (
-	RequestLogin       MessageType = "login"
-	RequestRegister    MessageType = "register"
-	RequestCreateLobby MessageType = "create_lobby"
-	RequestJoinLobby   MessageType = "join_lobby"
-	RequestLeaveLobby  MessageType = "leave_lobby"
-	RequestStartGame   MessageType = "start_game"
-	RequestCancelGame  MessageType = "cancel_game"
+	RequestAuthentication MessageType = "authenticate"
+	RequestLogin          MessageType = "login"
+	RequestRegister       MessageType = "register"
+	RequestCreateLobby    MessageType = "create_lobby"
+	RequestJoinLobby      MessageType = "join_lobby"
+	RequestLeaveLobby     MessageType = "leave_lobby"
+	RequestStartGame      MessageType = "start_game"
+	RequestCancelGame     MessageType = "cancel_game"
 
 	ResponseWelcome             MessageType = "welcome"
 	ResponseLoginSuccessful     MessageType = "login_successful"

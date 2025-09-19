@@ -23,6 +23,7 @@ export type broadcastedLobby = {
 
 export const MessageTypes = {
   //Sent from Server
+  RequestAuthentication: "authenticate",
   RequestLogin: 'login',
   RequestRegister: 'register',
   RequestCreateLobby: 'create_lobby',

@@ -1,4 +1,3 @@
-// websocket.go (updated sections)
 package main
 
 import (
@@ -102,7 +101,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 		// If not authenticated yet, only accept authenticate messages
 		if !authenticated {
-			if base.Type != "authenticate" || base.Token == "" {
+			if base.Type != RequestAuthentication || base.Token == "" {
 				conn.WriteJSON(map[string]interface{}{
 					"type":  ResponseError,
 					"error": "Authentication required",
