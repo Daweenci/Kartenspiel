@@ -37,6 +37,7 @@ func sendErrorToPlayer(player *Player, errorMsg string) {
 }
 
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	log.Printf("NEW WEBSOCKET CONNECTION from %s", r.RemoteAddr)
 	// Upgrade to WebSocket immediately (no auth check yet)
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -53,9 +54,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		if player != nil {
 			log.Println("Connection closed for player:", player.ID)
 
-			activeConnectionsLock.Lock()
-			defer activeConnectionsLock.Unlock()
-
 			// Remove player from lobbies
 			lobbiesLock.Lock()
 			for _, lobby := range lobbies {
@@ -70,6 +68,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			lobbiesLock.Unlock()
+			log.Printf("Player %s removed from lobbies", player.ID)
 
 			delete(activeConnections, player.ID)
 			setPlayerOnlineStatus(player.ID, false)
@@ -211,6 +210,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			sendErrorToPlayer(player, "Unknown message type")
 		}
 	}
+
 }
 
 // Helper function to get lobbies list

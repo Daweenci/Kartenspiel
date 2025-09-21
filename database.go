@@ -3,43 +3,23 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"io"
 	"log"
 	"os"
+	"strings"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
-	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
 
 func initDB() error {
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		host := os.Getenv("DB_HOST")
-		if host == "" {
-			host = "localhost"
-		}
-		port := os.Getenv("DB_PORT")
-		if port == "" {
-			port = "5432"
-		}
-		user := os.Getenv("DB_USER")
-		if user == "" {
-			user = "postgres"
-		}
-		password := os.Getenv("DB_PASSWORD")
-		dbname := os.Getenv("DB_NAME")
-		if dbname == "" {
-			dbname = "mydb"
-		}
-
-		dbURL = fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-			host, port, user, password, dbname)
-	}
+	dbPath := "game.db" // SQLite database file
 
 	var err error
-	db, err = sql.Open("postgres", dbURL)
+	db, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return fmt.Errorf("failed to open database: %v", err)
 	}
@@ -52,31 +32,51 @@ func initDB() error {
 		return fmt.Errorf("failed to ping database: %v", err)
 	}
 
-	if err = createTables(); err != nil {
-		return fmt.Errorf("failed to create tables: %v", err)
+	if err = loadSchema(); err != nil {
+		return fmt.Errorf("failed to load schema: %v", err)
 	}
 
 	log.Println("Database connection established successfully")
 	return nil
 }
 
-func createTables() error {
-	queries := []string{
-		`CREATE TABLE IF NOT EXISTS players (
-			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			username VARCHAR(50) UNIQUE NOT NULL,
-			password_hash VARCHAR(255) NOT NULL,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			last_login TIMESTAMP,
-			is_online BOOLEAN DEFAULT FALSE
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_players_username ON players(username)`,
-		`CREATE INDEX IF NOT EXISTS idx_players_online ON players(is_online)`,
+func loadSchema() error {
+	schemaFile, err := os.Open("schema.sql")
+	if err != nil {
+		return fmt.Errorf("failed to open schema.sql: %v", err)
+	}
+	defer schemaFile.Close()
+
+	schemaBytes, err := io.ReadAll(schemaFile)
+	if err != nil {
+		return fmt.Errorf("failed to read schema.sql: %v", err)
 	}
 
-	for _, query := range queries {
-		if _, err := db.Exec(query); err != nil {
-			return fmt.Errorf("failed to execute query '%s': %v", query, err)
+	schema := string(schemaBytes)
+
+	// Remove comments and split properly
+	lines := strings.Split(schema, "\n")
+	var cleanedLines []string
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "--") {
+			cleanedLines = append(cleanedLines, line)
+		}
+	}
+
+	cleanedSchema := strings.Join(cleanedLines, " ")
+	statements := strings.Split(cleanedSchema, ";")
+
+	for _, statement := range statements {
+		statement = strings.TrimSpace(statement)
+		if statement == "" {
+			continue
+		}
+
+		log.Printf("Executing SQL: %s", statement) // Debug output
+		if _, err := db.Exec(statement); err != nil {
+			return fmt.Errorf("failed to execute statement '%s': %v", statement, err)
 		}
 	}
 
@@ -84,12 +84,12 @@ func createTables() error {
 }
 
 type PlayerDB struct {
-	ID           string    `db:"id"`
-	Username     string    `db:"username"`
-	PasswordHash string    `db:"password_hash"`
-	CreatedAt    time.Time `db:"created_at"`
+	ID           string     `db:"id"`
+	Username     string     `db:"username"`
+	PasswordHash string     `db:"password_hash"`
+	CreatedAt    time.Time  `db:"created_at"`
 	LastLogin    *time.Time `db:"last_login"`
-	IsOnline     bool      `db:"is_online"`
+	IsOnline     bool       `db:"is_online"`
 }
 
 func hashPassword(password string) (string, error) {
@@ -105,21 +105,42 @@ func verifyPassword(hashedPassword, password string) bool {
 	return err == nil
 }
 
-
 func registerPlayer(username, password string) (string, error) {
 	hashedPassword, err := hashPassword(password)
 	if err != nil {
 		return "", fmt.Errorf("failed to hash password: %v", err)
 	}
 
-	var playerID string
-	query := `INSERT INTO players (username, password_hash) VALUES ($1, $2) RETURNING id`
-	err = db.QueryRow(query, username, hashedPassword).Scan(&playerID)
+	// SQLite doesn't support RETURNING, so we need to do this differently
+	tx, err := db.Begin()
 	if err != nil {
-		if err.Error() == `pq: duplicate key value violates unique constraint "players_username_key"` {
+		return "", fmt.Errorf("failed to begin transaction: %v", err)
+	}
+	defer tx.Rollback()
+
+	query := `INSERT INTO players (username, password_hash) VALUES (?, ?)`
+	result, err := tx.Exec(query, username, hashedPassword)
+	if err != nil {
+		if err.Error() == "UNIQUE constraint failed: players.username" {
 			return "", fmt.Errorf("username already exists")
 		}
 		return "", fmt.Errorf("failed to create player: %v", err)
+	}
+
+	// Get the last inserted row ID and then fetch the actual ID
+	lastInsertID, err := result.LastInsertId()
+	if err != nil {
+		return "", fmt.Errorf("failed to get last insert ID: %v", err)
+	}
+
+	var playerID string
+	err = tx.QueryRow(`SELECT id FROM players WHERE rowid = ?`, lastInsertID).Scan(&playerID)
+	if err != nil {
+		return "", fmt.Errorf("failed to get player ID: %v", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return "", fmt.Errorf("failed to commit transaction: %v", err)
 	}
 
 	return playerID, nil
@@ -127,7 +148,7 @@ func registerPlayer(username, password string) (string, error) {
 
 func authenticatePlayer(username, password string) (string, error) {
 	var playerDB PlayerDB
-	query := `SELECT id, password_hash FROM players WHERE username = $1`
+	query := `SELECT id, password_hash FROM players WHERE username = ?`
 	err := db.QueryRow(query, username).Scan(&playerDB.ID, &playerDB.PasswordHash)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -140,7 +161,7 @@ func authenticatePlayer(username, password string) (string, error) {
 		return "", fmt.Errorf("invalid credentials")
 	}
 
-	updateQuery := `UPDATE players SET last_login = CURRENT_TIMESTAMP, is_online = TRUE WHERE id = $1`
+	updateQuery := `UPDATE players SET last_login = CURRENT_TIMESTAMP, is_online = TRUE WHERE id = ?`
 	_, err = db.Exec(updateQuery, playerDB.ID)
 	if err != nil {
 		log.Printf("Failed to update last login for player %s: %v", playerDB.ID, err)
@@ -152,7 +173,7 @@ func authenticatePlayer(username, password string) (string, error) {
 func getPlayerByID(playerID string) (*PlayerDB, error) {
 	var player PlayerDB
 	query := `SELECT id, username, password_hash, created_at, last_login, is_online 
-			  FROM players WHERE id = $1`
+			  FROM players WHERE id = ?`
 	err := db.QueryRow(query, playerID).Scan(
 		&player.ID, &player.Username, &player.PasswordHash,
 		&player.CreatedAt, &player.LastLogin, &player.IsOnline)
@@ -166,7 +187,7 @@ func getPlayerByID(playerID string) (*PlayerDB, error) {
 }
 
 func setPlayerOnlineStatus(playerID string, isOnline bool) error {
-	query := `UPDATE players SET is_online = $1 WHERE id = $2`
+	query := `UPDATE players SET is_online = ? WHERE id = ?`
 	_, err := db.Exec(query, isOnline, playerID)
 	if err != nil {
 		return fmt.Errorf("failed to update online status: %v", err)

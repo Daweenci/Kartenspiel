@@ -35,6 +35,13 @@ export default function useWebSocket({
     localStorage.removeItem('gameToken');
   };
 
+  window.addEventListener('beforeunload', function() {
+    console.log('Tab is about to close/reload');
+    if (!ws.current) return;
+    ws.current.onclose = function () {}; // disable onclose handler first
+    ws.current.close();
+  });
+
   // Cross-tab token sync
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
@@ -60,12 +67,11 @@ export default function useWebSocket({
       return;
     }
 
-    const wsUrl = process.env.REACT_APP_WS_URL || 'ws://localhost:4000/ws';
+    const wsUrl = import.meta.env.REACT_APP_WS_URL || 'ws://localhost:4000/ws';
     
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {
-      console.log('WebSocket connected');
       // Send authentication as first message
       if (ws.current && ws.current.readyState === WebSocket.OPEN) {
         ws.current.send(JSON.stringify({
@@ -77,6 +83,7 @@ export default function useWebSocket({
 
     ws.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
+      console.log('WebSocket message received:', data);
 
       switch (data.type) {
         case MessageTypes.ResponseWelcome:

@@ -38,7 +38,7 @@ export default function Auth({ connectWebSocket }: AuthProps) {
 
   async function onRegister(name: string, password: string) {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+      const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:4000';
       const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
         headers: {
@@ -59,13 +59,14 @@ export default function Auth({ connectWebSocket }: AuthProps) {
       connectWebSocket();
       toast('Registration successful');
     } catch (error: any) {
+      console.error('Registration error:', error);
       toast(error.message);
     }
   }
 
   async function onLogin(name: string, password: string) {
     try {
-      const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+      const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:4000';
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
@@ -86,6 +87,7 @@ export default function Auth({ connectWebSocket }: AuthProps) {
       connectWebSocket();
       toast('Login successful');
     } catch (error: any) {
+      console.error('Login error:', error);
       toast(error.message);
     }
   }
