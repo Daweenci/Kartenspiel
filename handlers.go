@@ -10,24 +10,26 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 	lobbiesLock.Lock()
 	defer lobbiesLock.Unlock()
 
+	// Check if lobby exists
 	lobby, ok := lobbies[msg.LobbyID]
 	if !ok {
 		log.Println("joinLobbyHandler: Lobby not found")
-		// Lobby not found, silently ignore or send a success response if needed
+		// Lobby not found, silently ignore or send a response if needed
 		return
 	}
 
+	// Check if player is connected
 	player, ok := activeConnections[msg.PlayerID]
 	if !ok {
 		log.Println("joinLobbyHandler: Player not found")
-		// Player not found, silently ignore or send a success response if needed
+		// Player not found, silently ignore or send a response if needed
 		return
 	}
 
 	// Check if player is already in the lobby
 	for _, p := range lobby.Players {
 		if p.ID == msg.PlayerID {
-			// Already in the lobby, silently ignore or send a success response if needed
+			// Already in the lobby, silently ignore or send a response if needed
 			return
 		}
 	}
@@ -68,36 +70,47 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 
 func leaveLobbyHandler(msg LeaveLobbyRequest) {
 	lobbiesLock.Lock()
-	defer lobbiesLock.Unlock()
 
-	if lobby, ok := lobbies[msg.LobbyID]; ok {
-		for i := len(lobby.GameStart) - 1; i >= 0; i-- {
-			if lobby.GameStart[i].ID == msg.PlayerID {
-				lobby.GameStart = append(lobby.GameStart[:i], lobby.GameStart[i+1:]...)
-			}
-		}
+	lobby, ok := lobbies[msg.LobbyID]
 
-		for i := len(lobby.Players) - 1; i >= 0; i-- {
-			if lobby.Players[i].ID == msg.PlayerID {
-				lobby.Players = append(lobby.Players[:i], lobby.Players[i+1:]...)
-				break
-			}
-		}
-
-		if len(lobby.Players) == 0 {
-			delete(lobbies, lobby.ID)
-		} else {
-			broadcastLobbyUpdate(lobby)
-		}
-		err := activeConnections[msg.PlayerID].Conn.WriteJSON(map[string]interface{}{
-			"type": ResponseLobbyLeft,
-		})
-		if err != nil {
-			log.Println("Error sending LobbyID:", err)
-			return
-		}
-		broadcastLobbies()
+	if !ok {
+		log.Println("leaveLobbyHandler: Lobby not found")
+		lobbiesLock.Unlock()
+		return
 	}
+
+	for i := len(lobby.GameStart) - 1; i >= 0; i-- {
+		if lobby.GameStart[i].ID == msg.PlayerID {
+			lobby.GameStart = append(lobby.GameStart[:i], lobby.GameStart[i+1:]...)
+			break
+		}
+	}
+
+	for i := len(lobby.Players) - 1; i >= 0; i-- {
+		if lobby.Players[i].ID == msg.PlayerID {
+			lobby.Players = append(lobby.Players[:i], lobby.Players[i+1:]...)
+			break
+		}
+	}
+
+	lobbyDeleted := false
+	if len(lobby.Players) == 0 {
+		delete(lobbies, lobby.ID)
+		lobbyDeleted = true
+	}
+	lobbiesLock.Unlock()
+	if !lobbyDeleted {
+		broadcastLobbyUpdate(lobby)
+	}
+
+	err := activeConnections[msg.PlayerID].Conn.WriteJSON(map[string]interface{}{
+		"type": ResponseLobbyLeft,
+	})
+	if err != nil {
+		log.Println("Error leaving Lobby:", err)
+		return
+	}
+	broadcastLobbies()
 }
 
 func createLobbyHandler(msg CreateLobbyRequest) {
