@@ -53,9 +53,9 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 
 	// Check lobby capacity
 	if len(lobby.Players) >= lobby.MaxPlayers {
-		player.Conn.WriteJSON(map[string]interface{}{
-			"type":    ResponseJoinLobbyFailed,
-			"message": "Lobby is full",
+		player.Conn.WriteJSON(LobbyFullResponse{
+			Type:    ResponseJoinLobbyFailed,
+			Message: "Lobby is full",
 		})
 		lobby.Lock.Unlock()
 		return
@@ -120,8 +120,8 @@ func leaveLobbyHandler(msg LeaveLobbyRequest) {
 		broadcastLobbyUpdate(lobby)
 	}
 
-	err := activePlayers[msg.PlayerID].Conn.WriteJSON(map[string]interface{}{
-		"type": ResponseLobbyLeft,
+	err := activePlayers[msg.PlayerID].Conn.WriteJSON(LobbyLeftResponse{
+		Type: ResponseLobbyLeft,
 	})
 	if err != nil {
 		log.Println("Error leaving Lobby:", err)

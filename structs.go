@@ -137,6 +137,11 @@ type IncorrectLobbyPasswordResponse struct {
 	Message string      `json:"message"`
 }
 
+type LobbyFullResponse struct {
+	Type    MessageType `json:"type"`
+	Message string      `json:"message"`
+}
+
 type SuccessfulJoinLobbyResponse struct {
 	Type  MessageType   `json:"type"`
 	Lobby LobbyResponse `json:"lobby"`
@@ -145,6 +150,10 @@ type SuccessfulJoinLobbyResponse struct {
 type CreateLobbyResponse struct {
 	Type  MessageType   `json:"type"`
 	Lobby LobbyResponse `json:"lobby"`
+}
+
+type LobbyLeftResponse struct {
+	Type MessageType `json:"type"`
 }
 
 type ErrorResponse struct {
