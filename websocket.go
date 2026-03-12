@@ -14,8 +14,8 @@ var (
 	lobbiesLock sync.RWMutex
 
 	// Keep active connections in memory for real-time communication
-	activeConnections     = make(map[string]*Player)
-	activeConnectionsLock sync.RWMutex
+	activePlayers     = make(map[string]*Player) // TODO: Active players, not connections
+	activePlayersLock sync.RWMutex
 
 	upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -27,12 +27,16 @@ var (
 )
 
 func sendErrorToPlayer(player *Player, errorMsg string) {
-	err := player.Conn.WriteJSON(ErrorResponse{
+	sendErrorViaConn(player.Conn, errorMsg)
+}
+
+func sendErrorViaConn(conn *websocket.Conn, errorMsg string) {
+	err := conn.WriteJSON(ErrorResponse{
 		Type:  ResponseError,
 		Error: errorMsg,
 	})
 	if err != nil {
-		log.Printf("Failed to send error message to player %s: %v", player.ID, err)
+		log.Printf("Failed to send error message to connection %s: %v", conn.RemoteAddr(), err)
 	}
 }
 
@@ -70,7 +74,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			lobbiesLock.Unlock()
 			log.Printf("Player %s removed from lobbies", player.ID)
 
-			delete(activeConnections, player.ID)
+			delete(activePlayers, player.ID)
 			setPlayerOnlineStatus(player.ID, false)
 			broadcastLobbies()
 		}
@@ -91,40 +95,28 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			Token string      `json:"token,omitempty"`
 		}
 		if err := json.Unmarshal(msgBytes, &base); err != nil {
-			conn.WriteJSON(map[string]interface{}{
-				"type":  ResponseError,
-				"error": "Invalid message format",
-			})
+			sendErrorViaConn(conn, "Invalid message format")
 			continue
 		}
 
 		// If not authenticated yet, only accept authenticate messages
 		if !authenticated {
 			if base.Type != RequestAuthentication || base.Token == "" {
-				conn.WriteJSON(map[string]interface{}{
-					"type":  ResponseError,
-					"error": "Authentication required",
-				})
+				sendErrorViaConn(conn, "Authentication required")
 				continue
 			}
 
 			// Validate JWT token
 			playerID, err := parseJWT(base.Token)
 			if err != nil {
-				conn.WriteJSON(map[string]interface{}{
-					"type":  ResponseError,
-					"error": "Invalid or expired token",
-				})
+				sendErrorViaConn(conn, "Invalid or expired token")
 				continue
 			}
 
 			// Get player from database
 			dbPlayer, err := getPlayerByID(playerID)
 			if err != nil {
-				conn.WriteJSON(map[string]interface{}{
-					"type":  ResponseError,
-					"error": "Player not found",
-				})
+				sendErrorViaConn(conn, "Player not found")
 				continue
 			}
 
@@ -135,24 +127,24 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				Conn: conn,
 			}
 
-			// Add to active connections
-			activeConnectionsLock.Lock()
-			activeConnections[player.ID] = player
-			activeConnectionsLock.Unlock()
+			// Add to active players
+			activePlayersLock.Lock()
+			activePlayers[player.ID] = player
+			activePlayersLock.Unlock()
 
 			// Set online status
 			setPlayerOnlineStatus(player.ID, true)
 			authenticated = true
 
 			// Send welcome message
-			conn.WriteJSON(map[string]interface{}{
-				"type": ResponseWelcome,
-				"player": map[string]string{
-					"id":   player.ID,
-					"name": player.Name,
+			conn.WriteJSON(WelcomeResponse{
+				Type: ResponseWelcome,
+				Player: PlayerResponse{
+					ID:   player.ID,
+					Name: player.Name,
 				},
-				"message": "Welcome back, " + player.Name + "!",
-				"lobbies": getLobbiesList(),
+				Message: "Welcome back, " + player.Name + "!",
+				Lobbies: getLobbiesList(),
 			})
 			continue
 		}

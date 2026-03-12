@@ -43,6 +43,10 @@ type PlayerResponse struct {
 	Name string `json:"name"`
 }
 
+type PlayerStarted struct {
+	ID string `json:"id"`
+}
+
 type LoginRequest struct {
 	Type     MessageType `json:"type"`
 	Name     string      `json:"name"`
@@ -79,13 +83,13 @@ type LeaveLobbyRequest struct {
 	PlayerID string      `json:"playerID"`
 }
 
-type StartGame struct {
+type StartGame struct { //TODO: Why StartGame not response or request?
 	Type     MessageType `json:"type"`
 	LobbyID  string      `json:"lobbyID"`
 	PlayerID string      `json:"playerID"`
 }
 
-type CancelGame struct {
+type CancelGame struct { //TODO: Why CancelGame not response or request?
 	Type     MessageType `json:"type"`
 	LobbyID  string      `json:"lobbyID"`
 	PlayerID string      `json:"playerID"`
@@ -100,6 +104,13 @@ type Lobby struct {
 	Players    []*Player
 	GameStart  []PlayerStarted
 	Lock       sync.RWMutex
+}
+
+type WelcomeResponse struct {
+	Type    MessageType     `json:"type"`
+	Player  PlayerResponse  `json:"player"`
+	Message string          `json:"message"`
+	Lobbies []LobbyResponse `json:"lobbies"`
 }
 
 type LobbyResponse struct {
@@ -134,10 +145,6 @@ type SuccessfulJoinLobbyResponse struct {
 type CreateLobbyResponse struct {
 	Type  MessageType   `json:"type"`
 	Lobby LobbyResponse `json:"lobby"`
-}
-
-type PlayerStarted struct {
-	ID string `json:"id"`
 }
 
 type ErrorResponse struct {

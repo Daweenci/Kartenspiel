@@ -19,9 +19,9 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 	}
 
 	// Check if player is connected
-	activeConnectionsLock.RLock()
-	player, ok := activeConnections[msg.PlayerID]
-	activeConnectionsLock.RUnlock()
+	activePlayersLock.RLock()
+	player, ok := activePlayers[msg.PlayerID]
+	activePlayersLock.RUnlock()
 	if !ok {
 		log.Println("joinLobbyHandler: Player not found")
 		disconnectPlayer(msg.PlayerID)
@@ -120,7 +120,7 @@ func leaveLobbyHandler(msg LeaveLobbyRequest) {
 		broadcastLobbyUpdate(lobby)
 	}
 
-	err := activeConnections[msg.PlayerID].Conn.WriteJSON(map[string]interface{}{
+	err := activePlayers[msg.PlayerID].Conn.WriteJSON(map[string]interface{}{
 		"type": ResponseLobbyLeft,
 	})
 	if err != nil {
@@ -131,9 +131,9 @@ func leaveLobbyHandler(msg LeaveLobbyRequest) {
 }
 
 func createLobbyHandler(msg CreateLobbyRequest) {
-	activeConnectionsLock.RLock()
-	player, ok := activeConnections[msg.PlayerID]
-	activeConnectionsLock.RUnlock()
+	activePlayersLock.RLock()
+	player, ok := activePlayers[msg.PlayerID]
+	activePlayersLock.RUnlock()
 	if !ok {
 		log.Println("createLobbyHandler: Player not found")
 		disconnectPlayer(msg.PlayerID)
@@ -184,9 +184,9 @@ func startGameHandler(msg StartGame) {
 		return
 	}
 
-	activeConnectionsLock.RLock()
-	player, ok := activeConnections[msg.PlayerID]
-	activeConnectionsLock.RUnlock()
+	activePlayersLock.RLock()
+	player, ok := activePlayers[msg.PlayerID]
+	activePlayersLock.RUnlock()
 	if !ok {
 		log.Println("StartGameHandler: Player not found")
 		disconnectPlayer(msg.PlayerID)
@@ -280,13 +280,13 @@ func broadcastLobbies() {
 		lobby.Lock.RUnlock()
 	}
 
-	activeConnectionsLock.RLock()
-	activeConnectionsCopy := make([]*Player, 0, len(activeConnections))
-	for _, p := range activeConnections {
-		activeConnectionsCopy = append(activeConnectionsCopy, p)
+	activePlayersLock.RLock()
+	activePlayersCopy := make([]*Player, 0, len(activePlayers))
+	for _, p := range activePlayers {
+		activePlayersCopy = append(activePlayersCopy, p)
 	}
-	activeConnectionsLock.RUnlock()
-	for _, player := range activeConnectionsCopy {
+	activePlayersLock.RUnlock()
+	for _, player := range activePlayersCopy {
 		err := player.Conn.WriteJSON(LobbiesUpdateResponse{
 			Type:    ResponseLobbyList,
 			Lobbies: lobbiesResponse,
@@ -299,14 +299,14 @@ func broadcastLobbies() {
 }
 
 func disconnectPlayer(playerID string) {
-	activeConnectionsLock.Lock()
-	defer activeConnectionsLock.Unlock()
+	activePlayersLock.Lock()
+	defer activePlayersLock.Unlock()
 
-	player, ok := activeConnections[playerID]
+	player, ok := activePlayers[playerID]
 	if !ok {
 		return
 	}
 
 	player.Conn.Close()
-	delete(activeConnections, playerID)
+	delete(activePlayers, playerID)
 }
