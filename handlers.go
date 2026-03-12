@@ -24,7 +24,7 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 	activeConnectionsLock.RUnlock()
 	if !ok {
 		log.Println("joinLobbyHandler: Player not found")
-		// Player not found, silently ignore or send a response if needed
+		disconnectPlayer(msg.PlayerID)
 		return
 	}
 
@@ -40,9 +40,9 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 
 	// Check password
 	if lobby.Password != msg.Password {
-		err := player.Conn.WriteJSON(map[string]interface{}{
-			"type":    ResponseJoinLobbyFailed,
-			"message": "Incorrect password",
+		err := player.Conn.WriteJSON(IncorrectLobbyPasswordResponse{
+			Type:    ResponseJoinLobbyFailed,
+			Message: "Incorrect password",
 		})
 		if err != nil {
 			log.Println("Error sending join failure response:", err)
@@ -63,37 +63,37 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 
 	// Add player and respond
 	lobby.Players = append(lobby.Players, player)
-	lobby.Lock.Unlock()
 	lobbyResponse := LobbyResponse{
 		ID:         lobby.ID,
 		Name:       lobby.Name,
 		MaxPlayers: lobby.MaxPlayers,
 		IsPrivate:  lobby.IsPrivate,
-		Players:    lobby.Players,
+		Players:    toPlayerResponses(lobby.Players),
 		GameStart:  lobby.GameStart,
 	}
-	err := player.Conn.WriteJSON(map[string]interface{}{
-		"type":  ResponseJoinLobbySuccessful,
-		"lobby": lobbyResponse,
+	lobby.Lock.Unlock()
+	err := player.Conn.WriteJSON(SuccessfulJoinLobbyResponse{
+		Type:  ResponseJoinLobbySuccessful,
+		Lobby: lobbyResponse,
 	})
 	if err != nil {
 		log.Println("Error sending Lobby join success:", err)
+		return
 	}
 	broadcastLobbyUpdate(lobby)
 	broadcastLobbies()
 }
 
 func leaveLobbyHandler(msg LeaveLobbyRequest) {
-	lobbiesLock.Lock()
-
+	lobbiesLock.RLock()
 	lobby, ok := lobbies[msg.LobbyID]
-
+	lobbiesLock.RUnlock()
 	if !ok {
 		log.Println("leaveLobbyHandler: Lobby not found")
-		lobbiesLock.Unlock()
 		return
 	}
 
+	lobby.Lock.Lock()
 	for i := len(lobby.GameStart) - 1; i >= 0; i-- {
 		if lobby.GameStart[i].ID == msg.PlayerID {
 			lobby.GameStart = append(lobby.GameStart[:i], lobby.GameStart[i+1:]...)
@@ -107,13 +107,15 @@ func leaveLobbyHandler(msg LeaveLobbyRequest) {
 			break
 		}
 	}
+	lobby.Lock.Unlock()
 
 	lobbyDeleted := false
 	if len(lobby.Players) == 0 {
+		lobbiesLock.Lock()
 		delete(lobbies, lobby.ID)
+		lobbiesLock.Unlock()
 		lobbyDeleted = true
 	}
-	lobbiesLock.Unlock()
 	if !lobbyDeleted {
 		broadcastLobbyUpdate(lobby)
 	}
@@ -129,10 +131,14 @@ func leaveLobbyHandler(msg LeaveLobbyRequest) {
 }
 
 func createLobbyHandler(msg CreateLobbyRequest) {
-	lobbiesLock.Lock()
-	defer lobbiesLock.Unlock()
-
-	player := activeConnections[msg.PlayerID]
+	activeConnectionsLock.RLock()
+	player, ok := activeConnections[msg.PlayerID]
+	activeConnectionsLock.RUnlock()
+	if !ok {
+		log.Println("createLobbyHandler: Player not found")
+		disconnectPlayer(msg.PlayerID)
+		return
+	}
 	lobbyID := uuid.New().String()
 
 	newLobby := &Lobby{
@@ -145,20 +151,22 @@ func createLobbyHandler(msg CreateLobbyRequest) {
 		GameStart:  []PlayerStarted{},
 	}
 
+	lobbiesLock.Lock()
 	lobbies[lobbyID] = newLobby
+	lobbiesLock.Unlock()
 
 	newLobbyResponse := LobbyResponse{
 		ID:         newLobby.ID,
 		Name:       newLobby.Name,
 		MaxPlayers: newLobby.MaxPlayers,
 		IsPrivate:  newLobby.IsPrivate,
-		Players:    newLobby.Players,
+		Players:    toPlayerResponses(newLobby.Players),
 		GameStart:  newLobby.GameStart,
 	}
 
-	err := player.Conn.WriteJSON(map[string]interface{}{
-		"type":  ResponseLobbyCreated,
-		"lobby": newLobbyResponse,
+	err := player.Conn.WriteJSON(CreateLobbyResponse{
+		Type:  ResponseLobbyCreated,
+		Lobby: newLobbyResponse,
 	})
 	if err != nil {
 		log.Println("Error sending LobbyID:", err)
@@ -168,94 +176,137 @@ func createLobbyHandler(msg CreateLobbyRequest) {
 }
 
 func startGameHandler(msg StartGame) {
-	lobbiesLock.Lock()
-	defer lobbiesLock.Unlock()
+	lobbiesLock.RLock()
+	lobby, ok := lobbies[msg.LobbyID]
+	lobbiesLock.RUnlock()
+	if !ok {
+		log.Println("StartGameHandler: Lobby not found")
+		return
+	}
 
-	lobby := lobbies[msg.LobbyID]
-	player := activeConnections[msg.PlayerID]
+	activeConnectionsLock.RLock()
+	player, ok := activeConnections[msg.PlayerID]
+	activeConnectionsLock.RUnlock()
+	if !ok {
+		log.Println("StartGameHandler: Player not found")
+		disconnectPlayer(msg.PlayerID)
+		return
+	}
 
-	lobby.GameStart = append(lobby.GameStart, PlayerStarted{
-		ID: player.ID,
-	})
+	lobby.Lock.Lock()
+	alreadyStarted := false
+	for _, p := range lobby.GameStart {
+		if p.ID == player.ID {
+			alreadyStarted = true
+			break
+		}
+	}
+	if !alreadyStarted {
+		lobby.GameStart = append(lobby.GameStart, PlayerStarted{ID: player.ID})
+	}
+	lobby.Lock.Unlock()
+
 	broadcastLobbyUpdate(lobby)
 }
 
 func cancelGameHandler(msg CancelGame) {
-	lobbiesLock.Lock()
-	defer lobbiesLock.Unlock()
-
+	lobbiesLock.RLock()
 	lobby, ok := lobbies[msg.LobbyID]
+	lobbiesLock.RUnlock()
 	if !ok {
 		log.Println("cancelGameHandler: Lobby not found")
 		return
 	}
 
+	lobby.Lock.Lock()
 	for i, p := range lobby.GameStart {
 		if p.ID == msg.PlayerID {
 			lobby.GameStart = append(lobby.GameStart[:i], lobby.GameStart[i+1:]...)
 			break
 		}
 	}
+	lobby.Lock.Unlock()
 	broadcastLobbyUpdate(lobby)
 }
 
 func broadcastLobbyUpdate(lobby *Lobby) {
 	lobby.Lock.RLock()
-	players := append([]*Player(nil), lobby.Players...)
+	// Copying mutable fields, leaving immutable ones out
+	playersCopy := append([]*Player(nil), lobby.Players...)
+	gameStartCopy := append([]PlayerStarted(nil), lobby.GameStart...)
+	lobby.Lock.RUnlock()
 	updatedLobby := LobbyResponse{
 		ID:         lobby.ID,
 		Name:       lobby.Name,
 		MaxPlayers: lobby.MaxPlayers,
 		IsPrivate:  lobby.IsPrivate,
-		Players:    players,
-		GameStart:  lobby.GameStart,
+		Players:    toPlayerResponses(playersCopy),
+		GameStart:  gameStartCopy,
 	}
-	lobby.Lock.RUnlock()
 
-	activeConnectionsLock.Lock()
-	for _, player := range players {
-		err := player.Conn.WriteJSON(map[string]interface{}{
-			"type":  ResponseLobbyUpdated,
-			"lobby": updatedLobby,
+	for _, player := range playersCopy {
+		err := player.Conn.WriteJSON(LobbyUpdatedResponse{
+			Type:  ResponseLobbyUpdated,
+			Lobby: updatedLobby,
 		})
 		if err != nil {
 			log.Printf("Error sending lobby update to player %s: %v", player.ID, err)
-			player.Conn.Close()
-			delete(activeConnections, player.ID)
+			disconnectPlayer(player.ID)
 		}
 	}
-	activeConnectionsLock.Unlock()
 }
 
 func broadcastLobbies() {
 	lobbiesLock.RLock()
-	lobbiesResponse := make([]LobbyResponse, 0, len(lobbies))
-	for _, lobby := range lobbies {
+	lobbiesCopy := make([]*Lobby, 0, len(lobbies))
+	for _, l := range lobbies {
+		lobbiesCopy = append(lobbiesCopy, l)
+	}
+	lobbiesLock.RUnlock()
+
+	lobbiesResponse := make([]LobbyResponse, 0, len(lobbiesCopy))
+	for _, lobby := range lobbiesCopy {
 		lobby.Lock.RLock()
 		playersCopy := append([]*Player(nil), lobby.Players...)
+		gameStartCopy := append([]PlayerStarted(nil), lobby.GameStart...)
 		lobbiesResponse = append(lobbiesResponse, LobbyResponse{
 			ID:         lobby.ID,
 			Name:       lobby.Name,
 			MaxPlayers: lobby.MaxPlayers,
 			IsPrivate:  lobby.IsPrivate,
-			Players:    playersCopy,
-			GameStart:  lobby.GameStart,
+			Players:    toPlayerResponses(playersCopy),
+			GameStart:  gameStartCopy,
 		})
 		lobby.Lock.RUnlock()
 	}
-	lobbiesLock.RUnlock()
 
-	activeConnectionsLock.Lock()
-	for id, player := range activeConnections {
-		err := player.Conn.WriteJSON(map[string]interface{}{
-			"type":    ResponseLobbyList,
-			"lobbies": lobbiesResponse,
+	activeConnectionsLock.RLock()
+	activeConnectionsCopy := make([]*Player, 0, len(activeConnections))
+	for _, p := range activeConnections {
+		activeConnectionsCopy = append(activeConnectionsCopy, p)
+	}
+	activeConnectionsLock.RUnlock()
+	for _, player := range activeConnectionsCopy {
+		err := player.Conn.WriteJSON(LobbiesUpdateResponse{
+			Type:    ResponseLobbyList,
+			Lobbies: lobbiesResponse,
 		})
 		if err != nil {
 			log.Println("Error broadcasting:", err)
-			player.Conn.Close()
-			delete(activeConnections, id)
+			disconnectPlayer(player.ID)
 		}
 	}
-	activeConnectionsLock.Unlock()
+}
+
+func disconnectPlayer(playerID string) {
+	activeConnectionsLock.Lock()
+	defer activeConnectionsLock.Unlock()
+
+	player, ok := activeConnections[playerID]
+	if !ok {
+		return
+	}
+
+	player.Conn.Close()
+	delete(activeConnections, playerID)
 }

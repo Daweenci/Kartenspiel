@@ -27,9 +27,9 @@ var (
 )
 
 func sendErrorToPlayer(player *Player, errorMsg string) {
-	err := player.Conn.WriteJSON(map[string]interface{}{
-		"type":  ResponseError,
-		"error": errorMsg,
+	err := player.Conn.WriteJSON(ErrorResponse{
+		Type:  ResponseError,
+		Error: errorMsg,
 	})
 	if err != nil {
 		log.Printf("Failed to send error message to player %s: %v", player.ID, err)
@@ -225,9 +225,23 @@ func getLobbiesList() []LobbyResponse {
 			Name:       l.Name,
 			MaxPlayers: l.MaxPlayers,
 			IsPrivate:  l.IsPrivate,
-			Players:    l.Players,
+			Players:    toPlayerResponses(l.Players),
 			GameStart:  l.GameStart,
 		})
 	}
 	return responseLobbies
+}
+
+// Helper function to convert Player to PlayerResponse
+func toPlayerResponses(players []*Player) []PlayerResponse {
+	res := make([]PlayerResponse, len(players))
+
+	for i, p := range players {
+		res[i] = PlayerResponse{
+			ID:   p.ID,
+			Name: p.Name,
+		}
+	}
+
+	return res
 }

@@ -33,9 +33,14 @@ const (
 )
 
 type Player struct {
-	ID   string          `json:"id"`
-	Name string          `json:"name"`
-	Conn *websocket.Conn `json:"-"`
+	ID   string
+	Name string
+	Conn *websocket.Conn
+}
+
+type PlayerResponse struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }
 
 type LoginRequest struct {
@@ -98,14 +103,44 @@ type Lobby struct {
 }
 
 type LobbyResponse struct {
-	ID         string          `json:"id"`
-	Name       string          `json:"name"`
-	MaxPlayers int             `json:"maxPlayers"`
-	IsPrivate  bool            `json:"isPrivate"`
-	Players    []*Player       `json:"players"`
-	GameStart  []PlayerStarted `json:"gameStart"`
+	ID         string           `json:"id"`
+	Name       string           `json:"name"`
+	MaxPlayers int              `json:"maxPlayers"`
+	IsPrivate  bool             `json:"isPrivate"`
+	Players    []PlayerResponse `json:"playersResponse"`
+	GameStart  []PlayerStarted  `json:"gameStart"`
+}
+
+type LobbyUpdatedResponse struct {
+	Type  MessageType   `json:"type"`
+	Lobby LobbyResponse `json:"lobby"`
+}
+
+type LobbiesUpdateResponse struct {
+	Type    MessageType     `json:"type"`
+	Lobbies []LobbyResponse `json:"lobbies"`
+}
+
+type IncorrectLobbyPasswordResponse struct {
+	Type    MessageType `json:"type"`
+	Message string      `json:"message"`
+}
+
+type SuccessfulJoinLobbyResponse struct {
+	Type  MessageType   `json:"type"`
+	Lobby LobbyResponse `json:"lobby"`
+}
+
+type CreateLobbyResponse struct {
+	Type  MessageType   `json:"type"`
+	Lobby LobbyResponse `json:"lobby"`
 }
 
 type PlayerStarted struct {
 	ID string `json:"id"`
+}
+
+type ErrorResponse struct {
+	Type  MessageType `json:"type"`
+	Error string      `json:"error"`
 }
