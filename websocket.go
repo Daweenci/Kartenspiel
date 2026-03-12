@@ -11,11 +11,11 @@ import (
 
 var (
 	lobbies     = make(map[string]*Lobby)
-	lobbiesLock sync.Mutex
+	lobbiesLock sync.RWMutex
 
 	// Keep active connections in memory for real-time communication
 	activeConnections     = make(map[string]*Player)
-	activeConnectionsLock sync.Mutex
+	activeConnectionsLock sync.RWMutex
 
 	upgrader = websocket.Upgrader{
 		ReadBufferSize:  1024,
@@ -214,18 +214,19 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 }
 
 // Helper function to get lobbies list
-func getLobbiesList() []BroadcastedLobby {
+func getLobbiesList() []LobbyResponse {
 	lobbiesLock.Lock()
 	defer lobbiesLock.Unlock()
 
-	responseLobbies := make([]BroadcastedLobby, 0, len(lobbies))
+	responseLobbies := make([]LobbyResponse, 0, len(lobbies))
 	for _, l := range lobbies {
-		responseLobbies = append(responseLobbies, BroadcastedLobby{
+		responseLobbies = append(responseLobbies, LobbyResponse{
 			ID:         l.ID,
 			Name:       l.Name,
 			MaxPlayers: l.MaxPlayers,
 			IsPrivate:  l.IsPrivate,
 			Players:    l.Players,
+			GameStart:  l.GameStart,
 		})
 	}
 	return responseLobbies

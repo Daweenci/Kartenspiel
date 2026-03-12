@@ -1,6 +1,10 @@
 package main
 
-import "github.com/gorilla/websocket"
+import (
+	"sync"
+
+	"github.com/gorilla/websocket"
+)
 
 type MessageType string
 
@@ -82,20 +86,22 @@ type CancelGame struct {
 	PlayerID string      `json:"playerID"`
 }
 
-type BroadcastedLobby struct {
-	ID         string    `json:"id"`
-	Name       string    `json:"name"`
-	MaxPlayers int       `json:"maxPlayers"`
-	IsPrivate  bool      `json:"isPrivate"`
-	Players    []*Player `json:"players"`
+type Lobby struct {
+	ID         string
+	Name       string
+	MaxPlayers int
+	IsPrivate  bool
+	Password   string
+	Players    []*Player
+	GameStart  []PlayerStarted
+	Lock       sync.RWMutex
 }
 
-type Lobby struct {
+type LobbyResponse struct {
 	ID         string          `json:"id"`
 	Name       string          `json:"name"`
 	MaxPlayers int             `json:"maxPlayers"`
 	IsPrivate  bool            `json:"isPrivate"`
-	Password   string          `json:"password"`
 	Players    []*Player       `json:"players"`
 	GameStart  []PlayerStarted `json:"gameStart"`
 }

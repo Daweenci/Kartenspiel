@@ -7,11 +7,11 @@ import (
 )
 
 func joinLobbyHandler(msg JoinLobbyRequest) {
-	lobbiesLock.Lock()
-	defer lobbiesLock.Unlock()
 
 	// Check if lobby exists
+	lobbiesLock.RLock()
 	lobby, ok := lobbies[msg.LobbyID]
+	lobbiesLock.RUnlock()
 	if !ok {
 		log.Println("joinLobbyHandler: Lobby not found")
 		// Lobby not found, silently ignore or send a response if needed
@@ -19,28 +19,23 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 	}
 
 	// Check if player is connected
+	activeConnectionsLock.RLock()
 	player, ok := activeConnections[msg.PlayerID]
+	activeConnectionsLock.RUnlock()
 	if !ok {
 		log.Println("joinLobbyHandler: Player not found")
 		// Player not found, silently ignore or send a response if needed
 		return
 	}
 
+	lobby.Lock.Lock()
 	// Check if player is already in the lobby
 	for _, p := range lobby.Players {
 		if p.ID == msg.PlayerID {
 			// Already in the lobby, silently ignore or send a response if needed
+			lobby.Lock.Unlock()
 			return
 		}
-	}
-
-	// Check lobby capacity
-	if len(lobby.Players) >= lobby.MaxPlayers {
-		player.Conn.WriteJSON(map[string]interface{}{
-			"type":    ResponseJoinLobbyFailed,
-			"message": "Lobby is full",
-		})
-		return
 	}
 
 	// Check password
@@ -52,14 +47,34 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 		if err != nil {
 			log.Println("Error sending join failure response:", err)
 		}
+		lobby.Lock.Unlock()
+		return
+	}
+
+	// Check lobby capacity
+	if len(lobby.Players) >= lobby.MaxPlayers {
+		player.Conn.WriteJSON(map[string]interface{}{
+			"type":    ResponseJoinLobbyFailed,
+			"message": "Lobby is full",
+		})
+		lobby.Lock.Unlock()
 		return
 	}
 
 	// Add player and respond
 	lobby.Players = append(lobby.Players, player)
+	lobby.Lock.Unlock()
+	lobbyResponse := LobbyResponse{
+		ID:         lobby.ID,
+		Name:       lobby.Name,
+		MaxPlayers: lobby.MaxPlayers,
+		IsPrivate:  lobby.IsPrivate,
+		Players:    lobby.Players,
+		GameStart:  lobby.GameStart,
+	}
 	err := player.Conn.WriteJSON(map[string]interface{}{
 		"type":  ResponseJoinLobbySuccessful,
-		"lobby": lobby,
+		"lobby": lobbyResponse,
 	})
 	if err != nil {
 		log.Println("Error sending Lobby join success:", err)
@@ -132,9 +147,18 @@ func createLobbyHandler(msg CreateLobbyRequest) {
 
 	lobbies[lobbyID] = newLobby
 
+	newLobbyResponse := LobbyResponse{
+		ID:         newLobby.ID,
+		Name:       newLobby.Name,
+		MaxPlayers: newLobby.MaxPlayers,
+		IsPrivate:  newLobby.IsPrivate,
+		Players:    newLobby.Players,
+		GameStart:  newLobby.GameStart,
+	}
+
 	err := player.Conn.WriteJSON(map[string]interface{}{
 		"type":  ResponseLobbyCreated,
-		"lobby": newLobby,
+		"lobby": newLobbyResponse,
 	})
 	if err != nil {
 		log.Println("Error sending LobbyID:", err)
@@ -176,18 +200,20 @@ func cancelGameHandler(msg CancelGame) {
 }
 
 func broadcastLobbyUpdate(lobby *Lobby) {
-	updatedLobby := Lobby{
+	lobby.Lock.RLock()
+	players := append([]*Player(nil), lobby.Players...)
+	updatedLobby := LobbyResponse{
 		ID:         lobby.ID,
 		Name:       lobby.Name,
 		MaxPlayers: lobby.MaxPlayers,
 		IsPrivate:  lobby.IsPrivate,
-		Password:   lobby.Password,
-		Players:    lobby.Players,
+		Players:    players,
 		GameStart:  lobby.GameStart,
 	}
+	lobby.Lock.RUnlock()
 
 	activeConnectionsLock.Lock()
-	for _, player := range lobby.Players {
+	for _, player := range players {
 		err := player.Conn.WriteJSON(map[string]interface{}{
 			"type":  ResponseLobbyUpdated,
 			"lobby": updatedLobby,
@@ -202,22 +228,28 @@ func broadcastLobbyUpdate(lobby *Lobby) {
 }
 
 func broadcastLobbies() {
-	responseLobbies := make([]BroadcastedLobby, 0, len(lobbies))
-	for _, l := range lobbies {
-		responseLobbies = append(responseLobbies, BroadcastedLobby{
-			ID:         l.ID,
-			Name:       l.Name,
-			MaxPlayers: l.MaxPlayers,
-			IsPrivate:  l.IsPrivate,
-			Players:    l.Players,
+	lobbiesLock.RLock()
+	lobbiesResponse := make([]LobbyResponse, 0, len(lobbies))
+	for _, lobby := range lobbies {
+		lobby.Lock.RLock()
+		playersCopy := append([]*Player(nil), lobby.Players...)
+		lobbiesResponse = append(lobbiesResponse, LobbyResponse{
+			ID:         lobby.ID,
+			Name:       lobby.Name,
+			MaxPlayers: lobby.MaxPlayers,
+			IsPrivate:  lobby.IsPrivate,
+			Players:    playersCopy,
+			GameStart:  lobby.GameStart,
 		})
+		lobby.Lock.RUnlock()
 	}
+	lobbiesLock.RUnlock()
 
 	activeConnectionsLock.Lock()
 	for id, player := range activeConnections {
 		err := player.Conn.WriteJSON(map[string]interface{}{
 			"type":    ResponseLobbyList,
-			"lobbies": responseLobbies,
+			"lobbies": lobbiesResponse,
 		})
 		if err != nil {
 			log.Println("Error broadcasting:", err)
