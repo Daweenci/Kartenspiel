@@ -120,7 +120,15 @@ func leaveLobbyHandler(msg LeaveLobbyRequest) {
 		broadcastLobbyUpdate(lobby)
 	}
 
-	err := activePlayers[msg.PlayerID].Conn.WriteJSON(LobbyLeftResponse{
+	activePlayersLock.RLock()
+	activePlayer, ok := activePlayers[msg.PlayerID]
+	activePlayersLock.RUnlock()
+	if !ok {
+		log.Println("leaveLobbyHandler: Player not found")
+		disconnectPlayer(activePlayer.ID)
+		return
+	}
+	err := activePlayer.Conn.WriteJSON(LobbyLeftResponse{
 		Type: ResponseLobbyLeft,
 	})
 	if err != nil {
