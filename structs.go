@@ -36,9 +36,10 @@ type Player struct {
 	ID   string
 	Name string
 	Conn *websocket.Conn
+	Send chan []byte
 }
 
-type PlayerResponse struct {
+type PlayerDTO struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
@@ -106,57 +107,73 @@ type Lobby struct {
 	Lock       sync.RWMutex
 }
 
-type WelcomeResponse struct {
-	Type    MessageType     `json:"type"`
-	Player  PlayerResponse  `json:"player"`
-	Message string          `json:"message"`
-	Lobbies []LobbyResponse `json:"lobbies"`
+type Response interface {
+	GetType() MessageType
 }
 
-type LobbyResponse struct {
-	ID         string           `json:"id"`
-	Name       string           `json:"name"`
-	MaxPlayers int              `json:"maxPlayers"`
-	IsPrivate  bool             `json:"isPrivate"`
-	Players    []PlayerResponse `json:"playersResponse"`
-	GameStart  []PlayerStarted  `json:"gameStart"`
-}
-
-type LobbyUpdatedResponse struct {
-	Type  MessageType   `json:"type"`
-	Lobby LobbyResponse `json:"lobby"`
-}
-
-type LobbiesUpdateResponse struct {
-	Type    MessageType     `json:"type"`
-	Lobbies []LobbyResponse `json:"lobbies"`
-}
-
-type IncorrectLobbyPasswordResponse struct {
-	Type    MessageType `json:"type"`
-	Message string      `json:"message"`
-}
-
-type LobbyFullResponse struct {
-	Type    MessageType `json:"type"`
-	Message string      `json:"message"`
-}
-
-type SuccessfulJoinLobbyResponse struct {
-	Type  MessageType   `json:"type"`
-	Lobby LobbyResponse `json:"lobby"`
-}
-
-type CreateLobbyResponse struct {
-	Type  MessageType   `json:"type"`
-	Lobby LobbyResponse `json:"lobby"`
-}
-
-type LobbyLeftResponse struct {
+type BaseResponse struct {
 	Type MessageType `json:"type"`
 }
 
+func newBaseResponse(t MessageType) BaseResponse {
+	return BaseResponse{Type: t}
+}
+
+func (r BaseResponse) GetType() MessageType {
+	return r.Type
+}
+
+type WelcomeResponse struct {
+	BaseResponse
+	Player  PlayerDTO  `json:"player"`
+	Message string     `json:"message"`
+	Lobbies []LobbyDTO `json:"lobbies"`
+}
+
+type LobbyDTO struct {
+	ID         string          `json:"id"`
+	Name       string          `json:"name"`
+	MaxPlayers int             `json:"maxPlayers"`
+	IsPrivate  bool            `json:"isPrivate"`
+	Players    []PlayerDTO     `json:"playersResponse"`
+	GameStart  []PlayerStarted `json:"gameStart"`
+}
+
+type LobbyUpdatedResponse struct {
+	BaseResponse
+	Lobby LobbyDTO `json:"lobby"`
+}
+
+type LobbiesUpdateResponse struct {
+	BaseResponse
+	Lobbies []LobbyDTO `json:"lobbies"`
+}
+
+type IncorrectLobbyPasswordResponse struct {
+	BaseResponse
+	Message string `json:"message"`
+}
+
+type LobbyFullResponse struct {
+	BaseResponse
+	Message string `json:"message"`
+}
+
+type SuccessfulJoinLobbyResponse struct {
+	BaseResponse
+	Lobby LobbyDTO `json:"lobby"`
+}
+
+type CreateLobbyResponse struct {
+	BaseResponse
+	Lobby LobbyDTO `json:"lobby"`
+}
+
+type LobbyLeftResponse struct {
+	BaseResponse
+}
+
 type ErrorResponse struct {
-	Type  MessageType `json:"type"`
-	Error string      `json:"error"`
+	BaseResponse
+	Error string `json:"error"`
 }

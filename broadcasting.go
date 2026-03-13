@@ -8,7 +8,7 @@ func broadcastLobbyUpdate(lobby *Lobby) {
 	playersCopy := append([]*Player(nil), lobby.Players...)
 	gameStartCopy := append([]PlayerStarted(nil), lobby.GameStart...)
 	lobby.Lock.RUnlock()
-	updatedLobby := LobbyResponse{
+	updatedLobby := LobbyDTO{
 		ID:         lobby.ID,
 		Name:       lobby.Name,
 		MaxPlayers: lobby.MaxPlayers,
@@ -19,8 +19,8 @@ func broadcastLobbyUpdate(lobby *Lobby) {
 
 	for _, player := range playersCopy {
 		err := player.Conn.WriteJSON(LobbyUpdatedResponse{
-			Type:  ResponseLobbyUpdated,
-			Lobby: updatedLobby,
+			BaseResponse: newBaseResponse(ResponseLobbyUpdated),
+			Lobby:        updatedLobby,
 		})
 		if err != nil {
 			log.Printf("Error broadcasting lobby update to player %s: %v", player.ID, err)
@@ -37,12 +37,12 @@ func broadcastLobbies() {
 	}
 	lobbiesLock.RUnlock()
 
-	lobbiesResponse := make([]LobbyResponse, 0, len(lobbiesCopy))
+	lobbiesResponse := make([]LobbyDTO, 0, len(lobbiesCopy))
 	for _, lobby := range lobbiesCopy {
 		lobby.Lock.RLock()
 		playersCopy := append([]*Player(nil), lobby.Players...)
 		gameStartCopy := append([]PlayerStarted(nil), lobby.GameStart...)
-		lobbiesResponse = append(lobbiesResponse, LobbyResponse{
+		lobbiesResponse = append(lobbiesResponse, LobbyDTO{
 			ID:         lobby.ID,
 			Name:       lobby.Name,
 			MaxPlayers: lobby.MaxPlayers,
@@ -61,8 +61,8 @@ func broadcastLobbies() {
 	activePlayersLock.RUnlock()
 	for _, player := range activePlayersCopy {
 		err := player.Conn.WriteJSON(LobbiesUpdateResponse{
-			Type:    ResponseLobbyList,
-			Lobbies: lobbiesResponse,
+			BaseResponse: newBaseResponse(ResponseLobbyList),
+			Lobbies:      lobbiesResponse,
 		})
 		if err != nil {
 			log.Println("Error broadcasting lobbies:", err)

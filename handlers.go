@@ -40,30 +40,28 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 
 	// Check password
 	if lobby.Password != msg.Password {
-		err := player.Conn.WriteJSON(IncorrectLobbyPasswordResponse{
-			Type:    ResponseJoinLobbyFailed,
-			Message: "Incorrect password",
+		sendResponse(player, IncorrectLobbyPasswordResponse{
+			BaseResponse: newBaseResponse(ResponseJoinLobbyFailed),
+			Message:      "Incorrect password",
 		})
-		if err != nil {
-			log.Println("Error sending join failure response:", err)
-		}
 		lobby.Lock.Unlock()
 		return
 	}
 
 	// Check lobby capacity
 	if len(lobby.Players) >= lobby.MaxPlayers {
-		player.Conn.WriteJSON(LobbyFullResponse{
-			Type:    ResponseJoinLobbyFailed,
-			Message: "Lobby is full",
-		})
+		lobbyFullResponse := LobbyFullResponse{
+			BaseResponse: newBaseResponse(ResponseJoinLobbyFailed),
+			Message:      "Lobby is full",
+		}
+		sendResponse(player, lobbyFullResponse)
 		lobby.Lock.Unlock()
 		return
 	}
 
 	// Add player and respond
 	lobby.Players = append(lobby.Players, player)
-	lobbyResponse := LobbyResponse{
+	lobbyResponse := LobbyDTO{
 		ID:         lobby.ID,
 		Name:       lobby.Name,
 		MaxPlayers: lobby.MaxPlayers,
@@ -72,14 +70,11 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 		GameStart:  lobby.GameStart,
 	}
 	lobby.Lock.Unlock()
-	err := player.Conn.WriteJSON(SuccessfulJoinLobbyResponse{
-		Type:  ResponseJoinLobbySuccessful,
-		Lobby: lobbyResponse,
-	})
-	if err != nil {
-		log.Println("Error sending Lobby join success:", err)
-		return
+	successfulJoinResponse := SuccessfulJoinLobbyResponse{
+		BaseResponse: newBaseResponse(ResponseJoinLobbySuccessful),
+		Lobby:        lobbyResponse,
 	}
+	sendResponse(player, successfulJoinResponse)
 	broadcastLobbyUpdate(lobby)
 	broadcastLobbies()
 }
@@ -128,13 +123,9 @@ func leaveLobbyHandler(msg LeaveLobbyRequest) {
 		disconnectPlayer(activePlayer.ID)
 		return
 	}
-	err := activePlayer.Conn.WriteJSON(LobbyLeftResponse{
-		Type: ResponseLobbyLeft,
+	sendResponse(activePlayer, LobbyLeftResponse{
+		BaseResponse: newBaseResponse(ResponseLobbyLeft),
 	})
-	if err != nil {
-		log.Println("Error leaving Lobby:", err)
-		return
-	}
 	broadcastLobbies()
 }
 
@@ -163,7 +154,7 @@ func createLobbyHandler(msg CreateLobbyRequest) {
 	lobbies[lobbyID] = newLobby
 	lobbiesLock.Unlock()
 
-	newLobbyResponse := LobbyResponse{
+	newLobbyResponse := LobbyDTO{
 		ID:         newLobby.ID,
 		Name:       newLobby.Name,
 		MaxPlayers: newLobby.MaxPlayers,
@@ -172,14 +163,11 @@ func createLobbyHandler(msg CreateLobbyRequest) {
 		GameStart:  newLobby.GameStart,
 	}
 
-	err := player.Conn.WriteJSON(CreateLobbyResponse{
-		Type:  ResponseLobbyCreated,
-		Lobby: newLobbyResponse,
-	})
-	if err != nil {
-		log.Println("Error sending LobbyID:", err)
-		return
+	createLobbyResponse := CreateLobbyResponse{
+		BaseResponse: newBaseResponse(ResponseLobbyCreated),
+		Lobby:        newLobbyResponse,
 	}
+	sendResponse(player, createLobbyResponse)
 	broadcastLobbies()
 }
 

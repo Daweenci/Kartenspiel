@@ -24,13 +24,16 @@ var (
 )
 
 func sendErrorToPlayer(player *Player, errorMsg string) {
-	sendErrorViaConn(player.Conn, errorMsg)
+	sendResponse(player, ErrorResponse{
+		BaseResponse: newBaseResponse(ResponseError),
+		Error:        errorMsg,
+	})
 }
 
-func sendErrorViaConn(conn *websocket.Conn, errorMsg string) {
+func sendErrorToConn(conn *websocket.Conn, errorMsg string) {
 	err := conn.WriteJSON(ErrorResponse{
-		Type:  ResponseError,
-		Error: errorMsg,
+		BaseResponse: newBaseResponse(ResponseError),
+		Error:        errorMsg,
 	})
 	if err != nil {
 		log.Printf("Failed to send error message to connection %s: %v", conn.RemoteAddr(), err)
@@ -92,28 +95,28 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			Token string      `json:"token,omitempty"`
 		}
 		if err := json.Unmarshal(msgBytes, &base); err != nil {
-			sendErrorViaConn(conn, "Invalid message format")
+			sendErrorToConn(conn, "Invalid message format")
 			continue
 		}
 
 		// If not authenticated yet, only accept authenticate messages
 		if !authenticated {
 			if base.Type != RequestAuthentication || base.Token == "" {
-				sendErrorViaConn(conn, "Authentication required")
+				sendErrorToConn(conn, "Authentication required")
 				continue
 			}
 
 			// Validate JWT token
 			playerID, err := parseJWT(base.Token)
 			if err != nil {
-				sendErrorViaConn(conn, "Invalid or expired token")
+				sendErrorToConn(conn, "Invalid or expired token")
 				continue
 			}
 
 			// Get player from database
 			dbPlayer, err := getPlayerByID(playerID)
 			if err != nil {
-				sendErrorViaConn(conn, "Player not found")
+				sendErrorToConn(conn, "Player not found")
 				continue
 			}
 
@@ -122,6 +125,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				ID:   dbPlayer.ID,
 				Name: dbPlayer.Username,
 				Conn: conn,
+				Send: make(chan []byte, 256),
 			}
 
 			// Add to active players
@@ -129,20 +133,24 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			activePlayers[player.ID] = player
 			activePlayersLock.Unlock()
 
+			go player.writePump()
+
 			// Set online status
 			//setPlayerOnlineStatus(player.ID, true) TODO: ping all friends that player online, add to broadcasting.go
 			authenticated = true
 
 			// Send welcome message
-			conn.WriteJSON(WelcomeResponse{
-				Type: ResponseWelcome,
-				Player: PlayerResponse{
+			welcomeResponse := WelcomeResponse{
+				BaseResponse: newBaseResponse(ResponseWelcome),
+				Player: PlayerDTO{
 					ID:   player.ID,
 					Name: player.Name,
 				},
 				Message: "Welcome back, " + player.Name + "!",
 				Lobbies: getLobbiesList(),
-			})
+			}
+			sendResponse(player, welcomeResponse)
+			log.Printf("Player %s authenticated successfully", player.ID)
 			continue
 		}
 
