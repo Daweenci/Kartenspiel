@@ -1,4 +1,4 @@
-module github.com/Daweenci/kartenspiel
+module github.com/Daweenci/Web_Lobby
 
 go 1.24.3
 
