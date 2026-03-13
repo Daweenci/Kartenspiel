@@ -25,7 +25,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	playerID, err := authenticatePlayer(req.Name, req.Password)
+	playerID, err := verifyPlayerCredentials(req.Name, req.Password)
 	if err != nil {
 		w.WriteHeader(http.StatusUnauthorized)
 		json.NewEncoder(w).Encode(AuthResponse{Type: ResponseLoginFailed, Message: "Invalid username or password"})
@@ -57,7 +57,7 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	playerID, err := registerPlayer(req.Name, req.Password)
+	playerID, err := createPlayer(req.Name, req.Password)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(AuthResponse{Type: ResponseRegisterFailed, Message: err.Error()})

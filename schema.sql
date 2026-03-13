@@ -5,10 +5,8 @@ CREATE TABLE IF NOT EXISTS players (
     username TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    last_login DATETIME,
-    is_online BOOLEAN DEFAULT FALSE
+    last_login DATETIME
 );
 
 -- Indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
-CREATE INDEX IF NOT EXISTS idx_players_online ON players(is_online);

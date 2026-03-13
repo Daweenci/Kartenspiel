@@ -13,8 +13,7 @@ var (
 	lobbies     = make(map[string]*Lobby)
 	lobbiesLock sync.RWMutex
 
-	// Keep active connections in memory for real-time communication
-	activePlayers     = make(map[string]*Player) // TODO: Active players, not connections
+	activePlayers     = make(map[string]*Player)
 	activePlayersLock sync.RWMutex
 
 	upgrader = websocket.Upgrader{
@@ -22,8 +21,6 @@ var (
 		WriteBufferSize: 1024,
 		CheckOrigin:     func(r *http.Request) bool { return true },
 	}
-
-	jwtSecret = []byte("YOUR_SECRET_KEY")
 )
 
 func sendErrorToPlayer(player *Player, errorMsg string) {
@@ -75,7 +72,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			log.Printf("Player %s removed from lobbies", player.ID)
 
 			delete(activePlayers, player.ID)
-			setPlayerOnlineStatus(player.ID, false)
+			//setPlayerOnlineStatus(player.ID, false) TODO: ping all friends that player offline
 			broadcastLobbies()
 		}
 	}()
@@ -133,7 +130,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			activePlayersLock.Unlock()
 
 			// Set online status
-			setPlayerOnlineStatus(player.ID, true)
+			//setPlayerOnlineStatus(player.ID, true) TODO: ping all friends that player online
 			authenticated = true
 
 			// Send welcome message
