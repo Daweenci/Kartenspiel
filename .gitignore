@@ -1,4 +1,4 @@
 *.tmp
 .env*
 .DS_Store
-game.db
+*game.db*

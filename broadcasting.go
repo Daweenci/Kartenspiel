@@ -23,7 +23,7 @@ func broadcastLobbyUpdate(lobby *Lobby) {
 			Lobby: updatedLobby,
 		})
 		if err != nil {
-			log.Printf("Error sending lobby update to player %s: %v", player.ID, err)
+			log.Printf("Error broadcasting lobby update to player %s: %v", player.ID, err)
 			disconnectPlayer(player.ID)
 		}
 	}
@@ -65,7 +65,7 @@ func broadcastLobbies() {
 			Lobbies: lobbiesResponse,
 		})
 		if err != nil {
-			log.Println("Error broadcasting:", err)
+			log.Println("Error broadcasting lobbies:", err)
 			disconnectPlayer(player.ID)
 		}
 	}
