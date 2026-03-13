@@ -74,5 +74,10 @@ func sendResponse(p *Player, r Response) {
 		log.Printf("MessageType:%v. Marshal error: %v", r.GetType(), err)
 		return
 	}
-	p.Send <- msg
+
+	select {
+	case p.Send <- msg:
+	default:
+		log.Printf("Dropping message for %s (send buffer full)", p.ID)
+	}
 }
