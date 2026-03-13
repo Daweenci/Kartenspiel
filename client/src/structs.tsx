@@ -19,6 +19,7 @@ export type broadcastedLobby = {
   maxPlayers: number;
   isPrivate: boolean;
   players: Player[];
+  gameStart: PlayersStarted[];
 };
 
 export const MessageTypes = {

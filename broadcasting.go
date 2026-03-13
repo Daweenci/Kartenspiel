@@ -3,8 +3,10 @@ package main
 func broadcastLobbyUpdate(lobby *Lobby) {
 	lobby.Lock.RLock()
 	// Copying mutable fields, leaving immutable ones out
-	playersCopy := append([]*Player(nil), lobby.Players...)
-	gameStartCopy := append([]PlayerStarted(nil), lobby.GameStart...)
+	playersCopy := make([]*Player, len(lobby.Players))
+	copy(playersCopy, lobby.Players)
+	gameStartCopy := make([]PlayerStarted, len(lobby.GameStart))
+	copy(gameStartCopy, lobby.GameStart)
 	lobby.Lock.RUnlock()
 	updatedLobby := LobbyDTO{
 		ID:         lobby.ID,
@@ -35,8 +37,10 @@ func broadcastLobbies() {
 	lobbiesResponse := make([]LobbyDTO, 0, len(lobbiesCopy))
 	for _, lobby := range lobbiesCopy {
 		lobby.Lock.RLock()
-		playersCopy := append([]*Player(nil), lobby.Players...)
-		gameStartCopy := append([]PlayerStarted(nil), lobby.GameStart...)
+		playersCopy := make([]*Player, len(lobby.Players))
+		copy(playersCopy, lobby.Players)
+		gameStartCopy := make([]PlayerStarted, len(lobby.GameStart))
+		copy(gameStartCopy, lobby.GameStart)
 		lobbiesResponse = append(lobbiesResponse, LobbyDTO{
 			ID:         lobby.ID,
 			Name:       lobby.Name,

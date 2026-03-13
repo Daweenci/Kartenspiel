@@ -215,12 +215,13 @@ func cancelGameHandler(msg CancelGame) {
 	}
 
 	lobby.Lock.Lock()
-	for i, p := range lobby.GameStart {
-		if p.ID == msg.PlayerID {
+	for i := len(lobby.GameStart) - 1; i >= 0; i-- {
+		if lobby.GameStart[i].ID == msg.PlayerID {
 			lobby.GameStart = append(lobby.GameStart[:i], lobby.GameStart[i+1:]...)
 			break
 		}
 	}
 	lobby.Lock.Unlock()
+
 	broadcastLobbyUpdate(lobby)
 }

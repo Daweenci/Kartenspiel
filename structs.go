@@ -45,7 +45,7 @@ type PlayerDTO struct {
 }
 
 type PlayerStarted struct {
-	ID string `json:"id"`
+	ID string `json:"playerID"`
 }
 
 type LoginRequest struct {
@@ -135,7 +135,7 @@ type LobbyDTO struct {
 	Name       string          `json:"name"`
 	MaxPlayers int             `json:"maxPlayers"`
 	IsPrivate  bool            `json:"isPrivate"`
-	Players    []PlayerDTO     `json:"playersResponse"`
+	Players    []PlayerDTO     `json:"players"`
 	GameStart  []PlayerStarted `json:"gameStart"`
 }
 

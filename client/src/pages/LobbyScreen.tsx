@@ -38,11 +38,11 @@ export default function LobbyScreen({
         </h1>
         <h1>
           <strong>
-            Players {initLobby.players.length}/{initLobby.maxPlayers}:
+            Players {initLobby.players.length ?? "undefined"}/{initLobby.maxPlayers}:
           </strong>
         </h1>
         <ul className="list-none">
-          {initLobby.players.map((player, index) => (
+          {initLobby.players?.map((player, index) => (
             <li key={index}>{player.name}</li>
           ))}
         </ul>
