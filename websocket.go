@@ -74,7 +74,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			lobbiesLock.Unlock()
 			log.Printf("Player %s removed from lobbies", player.ID)
 
+			activePlayersLock.Lock()
 			delete(activePlayers, player.ID)
+			activePlayersLock.Unlock()
 			//setPlayerOnlineStatus(player.ID, false) TODO: ping all friends that player offline, add to broadcasting.go
 			broadcastLobbies()
 		}

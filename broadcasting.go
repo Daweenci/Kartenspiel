@@ -1,7 +1,5 @@
 package main
 
-import "log"
-
 func broadcastLobbyUpdate(lobby *Lobby) {
 	lobby.Lock.RLock()
 	// Copying mutable fields, leaving immutable ones out
@@ -18,14 +16,11 @@ func broadcastLobbyUpdate(lobby *Lobby) {
 	}
 
 	for _, player := range playersCopy {
-		err := player.Conn.WriteJSON(LobbyUpdatedResponse{
+		lobbyUpdatedResponse := LobbyUpdatedResponse{
 			BaseResponse: newBaseResponse(ResponseLobbyUpdated),
 			Lobby:        updatedLobby,
-		})
-		if err != nil {
-			log.Printf("Error broadcasting lobby update to player %s: %v", player.ID, err)
-			disconnectPlayer(player.ID)
 		}
+		sendResponse(player, lobbyUpdatedResponse)
 	}
 }
 
@@ -60,13 +55,10 @@ func broadcastLobbies() {
 	}
 	activePlayersLock.RUnlock()
 	for _, player := range activePlayersCopy {
-		err := player.Conn.WriteJSON(LobbiesUpdateResponse{
+		lobbiesUpdateResponse := LobbiesUpdateResponse{
 			BaseResponse: newBaseResponse(ResponseLobbyList),
 			Lobbies:      lobbiesResponse,
-		})
-		if err != nil {
-			log.Println("Error broadcasting lobbies:", err)
-			disconnectPlayer(player.ID)
 		}
+		sendResponse(player, lobbiesUpdateResponse)
 	}
 }
