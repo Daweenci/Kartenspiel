@@ -1,4 +1,4 @@
-// useGameWebSocket.ts - Updated version with Authorization header
+// useGameWebSocket.ts
 import { useRef, useEffect } from 'react';
 import type { yourLobby, broadcastedLobby, Player, PageType } from './structs';
 import { MessageTypes, Page } from './structs';
@@ -17,6 +17,7 @@ export default function useWebSocket({
   onSetLobbies,
   onSetPage,
 }: UseWebSocketProps) {
+
   const ws = useRef<WebSocket | null>(null);
   const tokenRef = useRef<string | null>(null);
 
@@ -35,44 +36,49 @@ export default function useWebSocket({
     localStorage.removeItem('gameToken');
   };
 
-  window.addEventListener('beforeunload', function() {
-    console.log('Tab is about to close/reload');
-    if (!ws.current) return;
-    ws.current.onclose = function () {}; // disable onclose handler first
-    ws.current.close();
-  });
-
   // Cross-tab token sync
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
       if (event.key === 'gameToken') tokenRef.current = event.newValue;
     };
+
     window.addEventListener('storage', handleStorage);
     return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
-  // Cleanup WebSocket
+  // Close socket if tab closes
   useEffect(() => {
+    const handleUnload = () => {
+      if (!ws.current) return;
+      ws.current.onclose = () => {};
+      ws.current.close();
+    };
+
+    window.addEventListener('beforeunload', handleUnload);
+
     return () => {
+      window.removeEventListener('beforeunload', handleUnload);
       ws.current?.close();
     };
   }, []);
 
   const connect = () => {
+
+    // Prevent duplicate connections
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) return;
+
     const token = getAuthToken();
     if (!token) {
       console.error('No auth token found. Cannot connect WebSocket.');
-      toast('Please log in first');
       onSetPage(Page.Auth);
       return;
     }
 
     const wsUrl = import.meta.env.REACT_APP_WS_URL || 'ws://localhost:4000/ws';
-    
+
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {
-      // Send authentication as first message
       if (ws.current && ws.current.readyState === WebSocket.OPEN) {
         ws.current.send(JSON.stringify({
           type: MessageTypes.RequestAuthentication,
@@ -86,6 +92,7 @@ export default function useWebSocket({
       console.log('WebSocket message received:', data);
 
       switch (data.type) {
+
         case MessageTypes.ResponseWelcome:
           onSetPlayer(data.player);
           onSetPage(Page.MainMenu);
@@ -120,7 +127,7 @@ export default function useWebSocket({
 
         case MessageTypes.ResponseError:
           toast(data.error || 'An error occurred');
-          // If auth error, redirect to login
+
           if (data.error?.includes('token') || data.error?.includes('auth')) {
             clearAuthToken();
             onSetPage(Page.Auth);
@@ -139,9 +146,9 @@ export default function useWebSocket({
 
     ws.current.onclose = (event) => {
       console.log('WebSocket closed', event.code, event.reason);
+
       onSetPlayer({} as Player);
-      
-      // If closed due to auth issues, redirect to login
+
       if (event.code === 1008 || event.code === 1011) {
         clearAuthToken();
         onSetPage(Page.Auth);
@@ -152,7 +159,6 @@ export default function useWebSocket({
 
   const sendMessage = (msg: any) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      // No need to send token with every message since we're authenticated
       ws.current.send(JSON.stringify(msg));
     } else {
       console.error('WebSocket is not connected');
@@ -160,21 +166,44 @@ export default function useWebSocket({
     }
   };
 
-  // Lobby / game actions - simplified since we don't need to send token
-  const createLobby = (lobbyName: string, maxPlayers: number, isPrivate: boolean, password: string) =>
-    sendMessage({ type: MessageTypes.RequestCreateLobby, lobbyName, maxPlayers, isPrivate, password });
+  const createLobby = (
+    lobbyName: string,
+    maxPlayers: number,
+    isPrivate: boolean,
+    password: string
+  ) =>
+    sendMessage({
+      type: MessageTypes.RequestCreateLobby,
+      lobbyName,
+      maxPlayers,
+      isPrivate,
+      password
+    });
 
   const joinLobby = (lobbyID: string, password: string) =>
-    sendMessage({ type: MessageTypes.RequestJoinLobby, lobbyID, password });
+    sendMessage({
+      type: MessageTypes.RequestJoinLobby,
+      lobbyID,
+      password
+    });
 
-  const leaveLobby = (lobbyID: string) => 
-    sendMessage({ type: MessageTypes.RequestLeaveLobby, lobbyID });
+  const leaveLobby = (lobbyID: string) =>
+    sendMessage({
+      type: MessageTypes.RequestLeaveLobby,
+      lobbyID
+    });
 
-  const startGame = (lobbyID: string) => 
-    sendMessage({ type: MessageTypes.RequestStartGame, lobbyID });
+  const startGame = (lobbyID: string) =>
+    sendMessage({
+      type: MessageTypes.RequestStartGame,
+      lobbyID
+    });
 
-  const cancelGame = (lobbyID: string) => 
-    sendMessage({ type: MessageTypes.RequestCancelGame, lobbyID });
+  const cancelGame = (lobbyID: string) =>
+    sendMessage({
+      type: MessageTypes.RequestCancelGame,
+      lobbyID
+    });
 
   const logout = () => {
     clearAuthToken();
@@ -184,6 +213,14 @@ export default function useWebSocket({
     onSetLobbies([]);
     onSetPage(Page.Auth);
   };
+
+  // AUTO CONNECT ON PAGE LOAD IF TOKEN EXISTS
+  useEffect(() => {
+    const token = getAuthToken();
+    if (token) {
+      connect();
+    }
+  }, []);
 
   return {
     connect,

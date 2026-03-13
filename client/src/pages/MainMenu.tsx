@@ -5,15 +5,24 @@ import type { broadcastedLobby } from '@/structs';
 import CreateLobbyModal from './CreateLobbyModal';
 import JoinPasswordModal from './JoinPasswordModal';
 import { toast } from "sonner"
+import UserProfile from "@/components/UserProfile";
 
 type MainMenuProps = {
   createLobby: (name: string, maxPlayers: number, isPrivate: boolean, password: string) => void;
   joinLobby: (id: string, joinPassword: string) => void; 
   lobbies: broadcastedLobby[];
   currentPlayerID: string;
+  playerName: string;
+  logout: () => void;
 };
 
-export default function MainMenu({ createLobby, joinLobby, lobbies }: MainMenuProps) {
+export default function MainMenu({
+  createLobby,
+  joinLobby,
+  lobbies,
+  playerName,
+  logout
+}: MainMenuProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
   const [selectedLobbyId, setSelectedLobbyId] = useState('');
@@ -47,7 +56,12 @@ export default function MainMenu({ createLobby, joinLobby, lobbies }: MainMenuPr
 
   return (
     <div>
-      <h1 className="text-4xl font-bold mb-4 flex justify-center">Main Menu</h1>
+      <div className="relative px-6 py-4">
+        <h1 className="text-4xl font-bold text-center">Main Menu</h1>
+      <div className="absolute top-4 right-6">
+      <UserProfile playerName={playerName} onLogout={logout}/>
+    </div>
+    </div>
 
       <div id="existingLobbies" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4 px-6">
         {lobbies?.map((lobby) => (
