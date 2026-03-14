@@ -9,8 +9,8 @@ import (
 
 // Helper function to get lobbies list as DTO
 func getLobbiesList() []LobbyDTO {
-	lobbiesLock.Lock()
-	defer lobbiesLock.Unlock()
+	lobbiesLock.RLock()
+	defer lobbiesLock.RUnlock()
 
 	responseLobbies := make([]LobbyDTO, 0, len(lobbies))
 	for _, l := range lobbies {
@@ -45,6 +45,7 @@ func disconnectPlayer(playerID string) {
 	player, ok := activePlayers[playerID]
 	if !ok {
 		activePlayersLock.Unlock()
+		removePlayerFromLobbies(playerID)
 		return
 	}
 
@@ -53,6 +54,40 @@ func disconnectPlayer(playerID string) {
 
 	close(player.Send)
 	player.Conn.Close()
+	removePlayerFromLobbies(playerID)
+}
+
+func removePlayerFromLobbies(playerID string) {
+	lobbiesLock.RLock()
+
+	for _, lobby := range lobbies {
+		lobby.Lock.Lock()
+
+		for i := len(lobby.Players) - 1; i >= 0; i-- {
+			if lobby.Players[i].ID == playerID {
+
+				lobby.Players = append(lobby.Players[:i], lobby.Players[i+1:]...)
+				empty := len(lobby.Players) == 0
+
+				lobby.Lock.Unlock()
+				lobbiesLock.RUnlock()
+
+				if empty {
+					lobbiesLock.Lock()
+					delete(lobbies, lobby.ID)
+					lobbiesLock.Unlock()
+				}
+
+				broadcastLobbyUpdate(lobby)
+				broadcastLobbies()
+				return
+			}
+		}
+
+		lobby.Lock.Unlock()
+	}
+
+	lobbiesLock.RUnlock()
 }
 
 func (p *Player) writePump() {

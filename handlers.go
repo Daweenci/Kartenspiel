@@ -88,16 +88,25 @@ func leaveLobbyHandler(msg LeaveLobbyRequest) {
 		return
 	}
 
+	activePlayersLock.RLock()
+	player, ok := activePlayers[msg.PlayerID]
+	activePlayersLock.RUnlock()
+	if !ok {
+		log.Println("leaveLobbyHandler: Player not found")
+		disconnectPlayer(player.ID)
+		return
+	}
+
 	lobby.Lock.Lock()
 	for i := len(lobby.GameStart) - 1; i >= 0; i-- {
-		if lobby.GameStart[i].ID == msg.PlayerID {
+		if lobby.GameStart[i].ID == player.ID {
 			lobby.GameStart = append(lobby.GameStart[:i], lobby.GameStart[i+1:]...)
 			break
 		}
 	}
 
 	for i := len(lobby.Players) - 1; i >= 0; i-- {
-		if lobby.Players[i].ID == msg.PlayerID {
+		if lobby.Players[i].ID == player.ID {
 			lobby.Players = append(lobby.Players[:i], lobby.Players[i+1:]...)
 			break
 		}
@@ -115,15 +124,7 @@ func leaveLobbyHandler(msg LeaveLobbyRequest) {
 		broadcastLobbyUpdate(lobby)
 	}
 
-	activePlayersLock.RLock()
-	activePlayer, ok := activePlayers[msg.PlayerID]
-	activePlayersLock.RUnlock()
-	if !ok {
-		log.Println("leaveLobbyHandler: Player not found")
-		disconnectPlayer(activePlayer.ID)
-		return
-	}
-	sendResponse(activePlayer, LobbyLeftResponse{
+	sendResponse(player, LobbyLeftResponse{
 		BaseResponse: newBaseResponse(ResponseLobbyLeft),
 	})
 	broadcastLobbies()
@@ -214,9 +215,18 @@ func cancelGameHandler(msg CancelGame) {
 		return
 	}
 
+	activePlayersLock.RLock()
+	player, ok := activePlayers[msg.PlayerID]
+	activePlayersLock.RUnlock()
+	if !ok {
+		log.Println("cancelGameHandler: Player not found")
+		disconnectPlayer(msg.PlayerID)
+		return
+	}
+
 	lobby.Lock.Lock()
 	for i := len(lobby.GameStart) - 1; i >= 0; i-- {
-		if lobby.GameStart[i].ID == msg.PlayerID {
+		if lobby.GameStart[i].ID == player.ID {
 			lobby.GameStart = append(lobby.GameStart[:i], lobby.GameStart[i+1:]...)
 			break
 		}

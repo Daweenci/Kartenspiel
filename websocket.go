@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 )
@@ -55,30 +56,17 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		conn.Close()
+
 		if player != nil {
-			log.Println("Connection closed for player:", player.ID)
+			activePlayersLock.RLock()
+			current, exists := activePlayers[player.ID]
+			activePlayersLock.RUnlock()
 
-			// Remove player from lobbies
-			lobbiesLock.Lock()
-			for _, lobby := range lobbies {
-				for i, p := range lobby.Players {
-					if p.ID == player.ID {
-						lobby.Players = append(lobby.Players[:i], lobby.Players[i+1:]...)
-						if len(lobby.Players) == 0 {
-							delete(lobbies, lobby.ID)
-						}
-						break
-					}
-				}
+			if exists && current.Conn == conn {
+				disconnectPlayer(player.ID)
+				broadcastLobbies()
 			}
-			lobbiesLock.Unlock()
-			log.Printf("Player %s removed from lobbies", player.ID)
 
-			activePlayersLock.Lock()
-			delete(activePlayers, player.ID)
-			activePlayersLock.Unlock()
-			//setPlayerOnlineStatus(player.ID, false) TODO: ping all friends that player offline, add to broadcasting.go
-			broadcastLobbies()
 		}
 	}()
 
@@ -131,6 +119,24 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// Add to active players
+			var oldPlayer *Player
+			activePlayersLock.RLock()
+			if p, exists := activePlayers[player.ID]; exists {
+				oldPlayer = p
+			}
+			activePlayersLock.RUnlock()
+
+			if oldPlayer != nil {
+				log.Printf("Player %s already connected, disconnecting old connection", player.ID)
+
+				oldPlayer.Conn.WriteControl(
+					websocket.CloseMessage,
+					websocket.FormatCloseMessage(1008, "Duplicate login"),
+					time.Now().Add(time.Second),
+				)
+
+				disconnectPlayer(oldPlayer.ID)
+			}
 			activePlayersLock.Lock()
 			activePlayers[player.ID] = player
 			activePlayersLock.Unlock()

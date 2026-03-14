@@ -19,32 +19,18 @@ export default function useWebSocket({
 }: UseWebSocketProps) {
 
   const ws = useRef<WebSocket | null>(null);
-  const tokenRef = useRef<string | null>(null);
 
   const setAuthToken = (token: string) => {
-    tokenRef.current = token;
     localStorage.setItem('gameToken', token);
   };
 
   const getAuthToken = () => {
-    if (!tokenRef.current) tokenRef.current = localStorage.getItem('gameToken');
-    return tokenRef.current;
+    return localStorage.getItem('gameToken');
   };
 
   const clearAuthToken = () => {
-    tokenRef.current = null;
     localStorage.removeItem('gameToken');
   };
-
-  // Cross-tab token sync
-  useEffect(() => {
-    const handleStorage = (event: StorageEvent) => {
-      if (event.key === 'gameToken') tokenRef.current = event.newValue;
-    };
-
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
 
   // Close socket if tab closes
   useEffect(() => {
@@ -65,7 +51,18 @@ export default function useWebSocket({
   const connect = () => {
 
     // Prevent duplicate connections
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) return;
+    if (
+      ws.current &&
+      (ws.current.readyState === WebSocket.CONNECTING ||
+       ws.current.readyState === WebSocket.OPEN)
+    ) {
+      return;
+    }
+
+    if (ws.current) {
+      ws.current.close();
+      ws.current = null;
+    }
 
     const token = getAuthToken();
     if (!token) {
@@ -127,11 +124,6 @@ export default function useWebSocket({
 
         case MessageTypes.ResponseError:
           toast(data.error || 'An error occurred');
-
-          if (data.error?.includes('token') || data.error?.includes('auth')) {
-            clearAuthToken();
-            onSetPage(Page.Auth);
-          }
           break;
 
         default:
@@ -147,12 +139,16 @@ export default function useWebSocket({
     ws.current.onclose = (event) => {
       console.log('WebSocket closed', event.code, event.reason);
 
-      onSetPlayer({} as Player);
+      ws.current = null;
 
-      if (event.code === 1008 || event.code === 1011) {
-        clearAuthToken();
+      if (event.code === 1008) {
+        onSetPlayer({} as Player);
+        onSetLobby({} as yourLobby);
+        onSetLobbies([]);
         onSetPage(Page.Auth);
-        toast('Authentication failed, please log in again');
+        toast("Logged in from another tab");
+      } else {
+        console.log("Connection closed");
       }
     };
   };
@@ -214,12 +210,10 @@ export default function useWebSocket({
     onSetPage(Page.Auth);
   };
 
-  // AUTO CONNECT ON PAGE LOAD IF TOKEN EXISTS
+  // Auto-connect if token exists
   useEffect(() => {
     const token = getAuthToken();
-    if (token) {
-      connect();
-    }
+    if (token) connect();
   }, []);
 
   return {
