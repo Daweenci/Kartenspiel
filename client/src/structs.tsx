@@ -49,7 +49,6 @@ export const MessageTypes = {
 } as const;
 
 export const Page = {
-  Loading: 'loading',
   Auth: 'auth',
   MainMenu: 'main_menu',
   InLobby: 'in_lobby',

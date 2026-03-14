@@ -14,7 +14,7 @@ export default function App() {
   const [player, setPlayer] = useState<Player>({} as Player);
   const [broadcastedLobbies, setbroadcastedLobbies] = useState<broadcastedLobby[]>([]);
   const [lobby, setLobby] = useState<yourLobby>({} as yourLobby);
-  const [currentPage, setCurrentPage] = useState<PageType>(Page.Loading);
+  const [currentPage, setCurrentPage] = useState<PageType>(Page.Auth);
 
   const {
     connect,
@@ -42,8 +42,6 @@ export default function App() {
     <Toaster />
       {(() => {
         switch (currentPage) {
-          case Page.Loading:
-            return <div className="flex justify-center items-center h-screen">Loading...</div>;
           case Page.Auth:
             return <Auth connectWebSocket={handleConnectWebSocket} />;
           case Page.MainMenu:
