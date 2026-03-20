@@ -1,4 +1,4 @@
--- schema.sql - Database schema for the game
+-- schema.sql - Database schema for the lobby
 
 CREATE TABLE IF NOT EXISTS players (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS players (
 );
 
 
-CREATE TABLE friend_requests (
+CREATE TABLE IF NOT EXISTS friend_requests (
     sender_id TEXT NOT NULL,
     receiver_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
