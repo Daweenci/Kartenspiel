@@ -32,6 +32,7 @@ export const MessageTypes = {
   RequestLeaveLobby: 'leave_lobby',
   RequestStartGame: 'start_game',
   RequestCancelGame: 'cancel_game',
+  RequestAddFriend: 'add_friend',
 
   //Sent from Client
   ResponseLoginFailed: 'login_failed',

@@ -210,6 +210,13 @@ export default function useWebSocket({
     onSetPage(Page.Auth);
   };
 
+  const addFriend = (friendName: string) => {
+    sendMessage({
+      type: MessageTypes.RequestAddFriend,
+      friendName
+    });
+  }
+
   // Auto-connect if token exists
   useEffect(() => {
     const token = getAuthToken();
@@ -219,6 +226,7 @@ export default function useWebSocket({
   return {
     connect,
     logout,
+    addFriend,
     createLobby,
     joinLobby,
     leaveLobby,

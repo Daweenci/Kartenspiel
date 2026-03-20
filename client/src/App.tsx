@@ -23,7 +23,8 @@ export default function App() {
     cancelGame,
     leaveLobby,
     joinLobby,
-    logout
+    logout,
+    addFriend
   } = useWebSocket({
     onSetPlayer: setPlayer,
     onSetLobby: setLobby,
@@ -53,6 +54,7 @@ export default function App() {
                 currentPlayerID={player.id}
                 playerName={player.name}
                 logout={logout}
+                addFriend={addFriend}
               />
             );
           case Page.InLobby:

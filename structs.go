@@ -17,19 +17,23 @@ const (
 	RequestLeaveLobby     MessageType = "leave_lobby"
 	RequestStartGame      MessageType = "start_game"
 	RequestCancelGame     MessageType = "cancel_game"
+	RequestAddFriend      MessageType = "add_friend"
 
-	ResponseWelcome             MessageType = "welcome"
-	ResponseLoginSuccessful     MessageType = "login_successful"
-	ResponseLoginFailed         MessageType = "login_failed"
-	ResponseRegisterSuccessful  MessageType = "register_successful"
-	ResponseRegisterFailed      MessageType = "register_failed"
-	ResponseLobbyCreated        MessageType = "lobby_created"
-	ResponseLobbyList           MessageType = "lobby_list"
-	ResponseLobbyUpdated        MessageType = "lobby_updated"
-	ResponseJoinLobbySuccessful MessageType = "join_lobby_successful"
-	ResponseJoinLobbyFailed     MessageType = "join_lobby_failed"
-	ResponseLobbyLeft           MessageType = "lobby_left"
-	ResponseError               MessageType = "error"
+	ResponseWelcome               MessageType = "welcome"
+	ResponseLoginSuccessful       MessageType = "login_successful"
+	ResponseLoginFailed           MessageType = "login_failed"
+	ResponseRegisterSuccessful    MessageType = "register_successful"
+	ResponseRegisterFailed        MessageType = "register_failed"
+	ResponseLobbyCreated          MessageType = "lobby_created"
+	ResponseLobbyList             MessageType = "lobby_list"
+	ResponseLobbyUpdated          MessageType = "lobby_updated"
+	ResponseJoinLobbySuccessful   MessageType = "join_lobby_successful"
+	ResponseJoinLobbyFailed       MessageType = "join_lobby_failed"
+	ResponseLobbyLeft             MessageType = "lobby_left"
+	ResponseFriendRequestFailed   MessageType = "friend_request_failed"
+	ResponseFriendRequestSent     MessageType = "friend_request_sent"
+	ResponseFriendRequestReceived MessageType = "friend_request_received"
+	ResponseError                 MessageType = "error"
 )
 
 type Player struct {
@@ -82,6 +86,12 @@ type LeaveLobbyRequest struct {
 	Type     MessageType `json:"type"`
 	LobbyID  string      `json:"lobbyID"`
 	PlayerID string      `json:"playerID"`
+}
+
+type AddFriendRequest struct {
+	Type       MessageType `json:"type"`
+	FriendName string      `json:"friendName"`
+	PlayerID   string      `json:"playerID"`
 }
 
 type StartGame struct { //TODO: Why StartGame not response or request?
@@ -171,6 +181,25 @@ type CreateLobbyResponse struct {
 
 type LobbyLeftResponse struct {
 	BaseResponse
+}
+
+type FriendRequestFailureResponse struct {
+	BaseResponse
+	Message string `json:"message"`
+}
+type FriendRequestSentResponse struct {
+	BaseResponse
+	Message string `json:"message"`
+}
+
+type FriendRequestReceivedResponse struct {
+	BaseResponse
+	PendingFriendRequests []FriendRequestDTO `json:"pendingFriendRequests"`
+}
+
+type FriendRequestDTO struct {
+	PlayerName string
+	PlayerID   string
 }
 
 type ErrorResponse struct {

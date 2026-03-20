@@ -104,3 +104,17 @@ func getPlayerByID(playerID string) (*PlayerDB, error) {
 
 	return &player, nil
 }
+
+func getPlayerIdByName(username string) (string, bool) {
+	var playerID string
+	query := `SELECT id FROM players WHERE username = ?`
+	err := db.QueryRow(query, username).Scan(&playerID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", false
+		}
+		log.Printf("Error occurred while fetching player ID by name: %v", err)
+		return "", false
+	}
+	return playerID, true
+}

@@ -211,6 +211,15 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			msg.PlayerID = player.ID
 			cancelGameHandler(msg)
 
+		case RequestAddFriend:
+			var msg AddFriendRequest
+			if err := json.Unmarshal(msgBytes, &msg); err != nil {
+				sendErrorToPlayer(player, "Invalid add_friend message")
+				continue
+			}
+			msg.PlayerID = player.ID
+			addFriendHandler(msg)
+
 		default:
 			sendErrorToPlayer(player, "Unknown message type")
 		}

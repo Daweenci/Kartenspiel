@@ -235,3 +235,61 @@ func cancelGameHandler(msg CancelGame) {
 
 	broadcastLobbyUpdate(lobby)
 }
+
+func addFriendHandler(msg AddFriendRequest) {
+	friendID, ok := getPlayerIdByName(msg.FriendName)
+	if !ok {
+		log.Println("addFriendHandler: Friend not found")
+		friendRequestFailureResponse := FriendRequestFailureResponse{
+			BaseResponse: newBaseResponse(ResponseFriendRequestFailed),
+			Message:      "Player not found",
+		}
+		activePlayersLock.RLock()
+		player, ok := activePlayers[msg.PlayerID]
+		activePlayersLock.RUnlock()
+		if !ok {
+			log.Println("addFriendHandler: Player not found")
+			disconnectPlayer(msg.PlayerID)
+			return
+		}
+		sendResponse(player, friendRequestFailureResponse)
+		return
+	}
+	friendRequestOk := createFriendRequest(msg.PlayerID, friendID)
+	if !friendRequestOk {
+		activePlayersLock.RLock()
+		player, ok := activePlayers[msg.PlayerID]
+		activePlayersLock.RUnlock()
+		if !ok {
+			log.Println("addFriendHandler: Player not found")
+			disconnectPlayer(msg.PlayerID)
+			return
+		}
+		sendErrorToPlayer(player, "Error creating Friend Request")
+
+	}
+	activePlayersLock.RLock()
+	player, playerOk := activePlayers[msg.PlayerID]
+	friend, friendOk := activePlayers[friendID]
+	activePlayersLock.RUnlock()
+	if !playerOk {
+		log.Println("addFriendHandler: Player not found")
+		disconnectPlayer(msg.PlayerID)
+		return
+	}
+	friendRequestSentResponse := FriendRequestSentResponse{
+		BaseResponse: newBaseResponse(ResponseFriendRequestSent),
+		Message:      "Friend request sent",
+	}
+	sendResponse(player, friendRequestSentResponse)
+	if !friendOk {
+		log.Println("addFriendHandler: Friend not found")
+		return
+	}
+	pendingFriendRequests := getPendingFriendRequests(friendID)
+	friendRequestReceivedResponse := FriendRequestReceivedResponse{
+		BaseResponse:          newBaseResponse(ResponseFriendRequestReceived),
+		PendingFriendRequests: pendingFriendRequests,
+	}
+	sendResponse(friend, friendRequestReceivedResponse)
+}

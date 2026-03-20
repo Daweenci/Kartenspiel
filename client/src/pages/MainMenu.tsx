@@ -14,6 +14,7 @@ type MainMenuProps = {
   currentPlayerID: string;
   playerName: string;
   logout: () => void;
+  addFriend: (friendName: string) => void;
 };
 
 export default function MainMenu({
@@ -21,7 +22,8 @@ export default function MainMenu({
   joinLobby,
   lobbies,
   playerName,
-  logout
+  logout,
+  addFriend
 }: MainMenuProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -59,7 +61,7 @@ export default function MainMenu({
       <div className="relative px-6 py-4">
         <h1 className="text-4xl font-bold text-center">Main Menu</h1>
       <div className="absolute top-4 right-6">
-      <UserProfile playerName={playerName} onLogout={logout}/>
+      <UserProfile playerName={playerName} onLogout={logout} onAddFriend={addFriend} />
     </div>
     </div>
 
