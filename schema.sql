@@ -8,5 +8,59 @@ CREATE TABLE IF NOT EXISTS players (
     last_login DATETIME
 );
 
--- Indexes for better query performance
-CREATE INDEX IF NOT EXISTS idx_players_username ON players(username);
+
+CREATE TABLE friend_requests (
+    sender_id TEXT NOT NULL,
+    receiver_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status TEXT DEFAULT 'pending',
+
+    PRIMARY KEY (sender_id, receiver_id),
+
+    FOREIGN KEY (sender_id) REFERENCES players(id),
+    FOREIGN KEY (receiver_id) REFERENCES players(id),
+
+    CHECK (sender_id != receiver_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_friend_request_receiver_id ON friend_requests(receiver_id);
+
+
+CREATE TABLE IF NOT EXISTS friend_lists (
+    first_player_id TEXT NOT NULL,
+    second_player_id TEXT NOT NULL,
+
+    PRIMARY KEY (first_player_id, second_player_id),
+
+    FOREIGN KEY (first_player_id) REFERENCES players(id),
+    FOREIGN KEY (second_player_id) REFERENCES players(id),
+
+    CHECK (first_player_id < second_player_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_first_player_id ON friend_lists(first_player_id);
+CREATE INDEX IF NOT EXISTS idx_second_player_id ON friend_lists(second_player_id);
+
+
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    first_player_id TEXT NOT NULL,
+    second_player_id TEXT NOT NULL,
+
+    sender_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (first_player_id, second_player_id)
+        REFERENCES friend_lists(first_player_id, second_player_id),
+
+    FOREIGN KEY (sender_id)
+        REFERENCES players(id),
+
+    CHECK (sender_id = first_player_id OR sender_id = second_player_id),
+    CHECK (first_player_id < second_player_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(first_player_id, second_player_id, created_at);

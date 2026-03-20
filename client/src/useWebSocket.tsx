@@ -146,7 +146,7 @@ export default function useWebSocket({
         onSetLobby({} as yourLobby);
         onSetLobbies([]);
         onSetPage(Page.Auth);
-        toast("Logged in from another tab");
+        toast("Logged in on another device");
       } else {
         console.log("Connection closed");
       }
