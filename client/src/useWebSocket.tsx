@@ -217,6 +217,14 @@ export default function useWebSocket({
     });
   }
 
+  const acceptRequest = (playerID: string, accept: boolean) => {
+    sendMessage({
+      type: MessageTypes.RequestAcceptFriendRequest,
+      playerID,
+      accept: accept
+    });
+  }
+
   // Auto-connect if token exists
   useEffect(() => {
     const token = getAuthToken();
@@ -227,6 +235,7 @@ export default function useWebSocket({
     connect,
     logout,
     addFriend,
+    acceptRequest,
     createLobby,
     joinLobby,
     leaveLobby,

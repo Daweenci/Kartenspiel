@@ -22,6 +22,11 @@ export type broadcastedLobby = {
   gameStart: PlayersStarted[];
 };
 
+export type friendRequest = {
+  playerID: string;
+  playerName: string;
+}
+
 export const MessageTypes = {
   //Sent from Server
   RequestAuthentication: "authenticate",
@@ -33,6 +38,7 @@ export const MessageTypes = {
   RequestStartGame: 'start_game',
   RequestCancelGame: 'cancel_game',
   RequestAddFriend: 'add_friend',
+  RequestAcceptFriendRequest: 'accept_friend_request',
 
   //Sent from Client
   ResponseLoginFailed: 'login_failed',

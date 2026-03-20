@@ -5,11 +5,16 @@ type Props = {
   playerName: string;
   onLogout: () => void;
   onAddFriend: (friendName: string) => void;
+  pendingRequests: {
+    playerID: string;
+    playerName: string;
+  }[];
+  onAcceptRequest: (playerID: string, accept: boolean) => void;
 };
 
 
 
-export default function UserProfile({ playerName, onLogout, onAddFriend }: Props) {
+export default function UserProfile({ playerName, onLogout, onAddFriend, pendingRequests, onAcceptRequest }: Props) {
   type View = "menu" | "friends" | "settings" |  null;
   const [view, setView] = useState<View>(null);
 
@@ -25,6 +30,11 @@ export default function UserProfile({ playerName, onLogout, onAddFriend }: Props
       >
         <span className="text-lg font-semibold">{playerName}</span>  
         <img src={profileIcon} alt="Profile Icon" className="inline w-8 h-8 ml-1" />
+        {pendingRequests.length > 0 && (
+          <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+            {pendingRequests.length}
+          </span>
+        )}
       </button>
 
       {view && (
@@ -74,6 +84,24 @@ export default function UserProfile({ playerName, onLogout, onAddFriend }: Props
                     Add Friend
                   </button>
                 </div>
+                <h3 className="text-lg font-semibold mt-4">Pending Friend Requests</h3>
+                {pendingRequests.length === 0 ? (
+                  <p className="text-gray-500">No pending requests</p>
+                ) : (
+                  <ul className="list-disc pl-5">
+                    {pendingRequests.map((req) => (
+                      <li key={req.playerID} className="flex items-center gap-2">
+                        {req.playerName}
+                        <button className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition duration-200" onClick={() => onAcceptRequest(req.playerID, true)}>
+                          Accept
+                        </button>
+                        <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition duration-200" onClick={() => onAcceptRequest(req.playerID, false)}>
+                          Decline
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
           )}

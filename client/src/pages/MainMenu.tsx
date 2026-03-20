@@ -13,8 +13,13 @@ type MainMenuProps = {
   lobbies: broadcastedLobby[];
   currentPlayerID: string;
   playerName: string;
+  pendingRequests: {
+    playerID: string;
+    playerName: string;
+  }[];
   logout: () => void;
   addFriend: (friendName: string) => void;
+  acceptRequest: (playerID: string, accept: boolean) => void;
 };
 
 export default function MainMenu({
@@ -22,8 +27,10 @@ export default function MainMenu({
   joinLobby,
   lobbies,
   playerName,
+  pendingRequests,
   logout,
-  addFriend
+  addFriend,
+  acceptRequest,
 }: MainMenuProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showJoinModal, setShowJoinModal] = useState(false);
@@ -61,7 +68,7 @@ export default function MainMenu({
       <div className="relative px-6 py-4">
         <h1 className="text-4xl font-bold text-center">Main Menu</h1>
       <div className="absolute top-4 right-6">
-      <UserProfile playerName={playerName} onLogout={logout} onAddFriend={addFriend} />
+      <UserProfile playerName={playerName} onLogout={logout} onAddFriend={addFriend} pendingRequests={pendingRequests} onAcceptRequest={acceptRequest} />
     </div>
     </div>
 
