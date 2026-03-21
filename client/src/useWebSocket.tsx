@@ -101,6 +101,7 @@ export default function useWebSocket({
           if (data.message) toast(data.message);
           if (data.lobbies) onSetLobbies(data.lobbies);
           if (data.pendingFriendRequests) onSetPendingFriendRequests(data.pendingFriendRequests);
+          if (data.friendsList) onSetFriendsList(data.friendsList);
           break;
 
         case MessageTypes.ResponseLobbyList:

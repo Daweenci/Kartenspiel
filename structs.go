@@ -153,6 +153,7 @@ type WelcomeResponse struct {
 	Message               string             `json:"message"`
 	Lobbies               []LobbyDTO         `json:"lobbies"`
 	PendingFriendRequests []FriendRequestDTO `json:"pendingFriendRequests"`
+	FriendsList           []PlayerDTO        `json:"friendsList"`
 }
 
 type LobbyDTO struct {
