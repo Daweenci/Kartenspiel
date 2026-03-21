@@ -154,8 +154,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 					ID:   player.ID,
 					Name: player.Name,
 				},
-				Message: "Welcome back, " + player.Name + "!",
-				Lobbies: getLobbiesList(),
+				Message:               "Welcome back, " + player.Name + "!",
+				Lobbies:               getLobbiesList(),
+				PendingFriendRequests: getPendingFriendRequests(player.ID),
 			}
 			sendResponse(player, welcomeResponse)
 			log.Printf("Player %s authenticated successfully", player.ID)
@@ -219,6 +220,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			msg.PlayerID = player.ID
 			addFriendHandler(msg)
+
+		//TODO: RequestAcceptFriendRequest true/false
 
 		default:
 			sendErrorToPlayer(player, "Unknown message type")

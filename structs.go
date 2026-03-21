@@ -9,15 +9,16 @@ import (
 type MessageType string
 
 const (
-	RequestAuthentication MessageType = "authenticate"
-	RequestLogin          MessageType = "login"
-	RequestRegister       MessageType = "register"
-	RequestCreateLobby    MessageType = "create_lobby"
-	RequestJoinLobby      MessageType = "join_lobby"
-	RequestLeaveLobby     MessageType = "leave_lobby"
-	RequestStartGame      MessageType = "start_game"
-	RequestCancelGame     MessageType = "cancel_game"
-	RequestAddFriend      MessageType = "add_friend"
+	RequestAuthentication      MessageType = "authenticate"
+	RequestLogin               MessageType = "login"
+	RequestRegister            MessageType = "register"
+	RequestCreateLobby         MessageType = "create_lobby"
+	RequestJoinLobby           MessageType = "join_lobby"
+	RequestLeaveLobby          MessageType = "leave_lobby"
+	RequestStartGame           MessageType = "start_game"
+	RequestCancelGame          MessageType = "cancel_game"
+	RequestAddFriend           MessageType = "add_friend"
+	RequestAcceptFriendRequest MessageType = "accept_friend_request"
 
 	ResponseWelcome               MessageType = "welcome"
 	ResponseLoginSuccessful       MessageType = "login_successful"
@@ -32,7 +33,7 @@ const (
 	ResponseLobbyLeft             MessageType = "lobby_left"
 	ResponseFriendRequestFailed   MessageType = "friend_request_failed"
 	ResponseFriendRequestSent     MessageType = "friend_request_sent"
-	ResponseFriendRequestReceived MessageType = "friend_request_received"
+	ResponsePendingFriendRequests MessageType = "pending_friend_requests"
 	ResponseError                 MessageType = "error"
 )
 
@@ -94,6 +95,11 @@ type AddFriendRequest struct {
 	PlayerID   string      `json:"playerID"`
 }
 
+type GetPendingFriendRequestsRequest struct {
+	Type     MessageType `json:"type"`
+	PlayerID string      `json:"playerID"`
+}
+
 type StartGame struct { //TODO: Why StartGame not response or request?
 	Type     MessageType `json:"type"`
 	LobbyID  string      `json:"lobbyID"`
@@ -135,9 +141,10 @@ func (r BaseResponse) GetType() MessageType {
 
 type WelcomeResponse struct {
 	BaseResponse
-	Player  PlayerDTO  `json:"player"`
-	Message string     `json:"message"`
-	Lobbies []LobbyDTO `json:"lobbies"`
+	Player                PlayerDTO          `json:"player"`
+	Message               string             `json:"message"`
+	Lobbies               []LobbyDTO         `json:"lobbies"`
+	PendingFriendRequests []FriendRequestDTO `json:"pendingFriendRequests"`
 }
 
 type LobbyDTO struct {
@@ -192,14 +199,14 @@ type FriendRequestSentResponse struct {
 	Message string `json:"message"`
 }
 
-type FriendRequestReceivedResponse struct {
+type PendingFriendRequestsResponse struct {
 	BaseResponse
 	PendingFriendRequests []FriendRequestDTO `json:"pendingFriendRequests"`
 }
 
 type FriendRequestDTO struct {
-	PlayerName string
-	PlayerID   string
+	FriendName string `json:"friendName"`
+	FriendID   string `json:"friendID"`
 }
 
 type ErrorResponse struct {

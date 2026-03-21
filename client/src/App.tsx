@@ -14,7 +14,7 @@ export default function App() {
   const [player, setPlayer] = useState<Player>({} as Player);
   const [broadcastedLobbies, setbroadcastedLobbies] = useState<broadcastedLobby[]>([]);
   const [lobby, setLobby] = useState<yourLobby>({} as yourLobby);
-  const [pendingRequests, setPendingRequests] = useState<friendRequest[]>([]);
+  const [pendingFriendRequests, setPendingFriendRequests] = useState<friendRequest[]>([]);
   const [currentPage, setCurrentPage] = useState<PageType>(Page.Auth);
 
   const {
@@ -26,11 +26,12 @@ export default function App() {
     joinLobby,
     logout,
     addFriend,
-    acceptRequest,
+    acceptFriendRequest,
   } = useWebSocket({
     onSetPlayer: setPlayer,
     onSetLobby: setLobby,
     onSetLobbies: setbroadcastedLobbies,
+    onSetPendingFriendRequests: setPendingFriendRequests,
     onSetPage: setCurrentPage,
   });
   const handleConnectWebSocket = () => { connect(); };
@@ -55,10 +56,10 @@ export default function App() {
                 lobbies={broadcastedLobbies}
                 currentPlayerID={player.id}
                 playerName={player.name}
-                pendingRequests={pendingRequests}
+                pendingFriendRequests={pendingFriendRequests}
                 logout={logout}
                 addFriend={addFriend}
-                acceptRequest={acceptRequest}
+                acceptFriendRequest={acceptFriendRequest}
               />
             );
           case Page.InLobby:

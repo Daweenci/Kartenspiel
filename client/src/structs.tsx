@@ -23,8 +23,8 @@ export type broadcastedLobby = {
 };
 
 export type friendRequest = {
-  playerID: string;
-  playerName: string;
+  friendID: string;
+  friendName: string;
 }
 
 export const MessageTypes = {
@@ -39,6 +39,7 @@ export const MessageTypes = {
   RequestCancelGame: 'cancel_game',
   RequestAddFriend: 'add_friend',
   RequestAcceptFriendRequest: 'accept_friend_request',
+  RequestGetPendingFriendRequests: 'get_pending_friend_requests',
 
   //Sent from Client
   ResponseLoginFailed: 'login_failed',
@@ -52,6 +53,7 @@ export const MessageTypes = {
   ResponseJoinLobbySuccessful: 'join_lobby_successful',
   ResponseJoinLobbyFailed: 'join_lobby_failed',
   ResponseLobbyLeft: 'lobby_left',
+  ResponsePendingFriendRequests: 'pending_friend_requests',
   ResponseError: 'error',
 } as const;
 

@@ -1,20 +1,19 @@
 import { useState } from "react";
 import profileIcon from "@/assets/user-profile-icon.svg";
+import type { friendRequest } from "@/structs";
 
 type Props = {
   playerName: string;
   onLogout: () => void;
   onAddFriend: (friendName: string) => void;
-  pendingRequests: {
-    playerID: string;
-    playerName: string;
-  }[];
-  onAcceptRequest: (playerID: string, accept: boolean) => void;
+  pendingFriendRequests: friendRequest[];
+  onAcceptFriendRequest: (friendID: string, accept: boolean) => void;
 };
 
 
 
-export default function UserProfile({ playerName, onLogout, onAddFriend, pendingRequests, onAcceptRequest }: Props) {
+export default function UserProfile({ playerName, onLogout, onAddFriend, pendingFriendRequests, onAcceptFriendRequest }: Props) {
+  console.log("Pending Friend Requests:", pendingFriendRequests);
   type View = "menu" | "friends" | "settings" |  null;
   const [view, setView] = useState<View>(null);
 
@@ -30,9 +29,9 @@ export default function UserProfile({ playerName, onLogout, onAddFriend, pending
       >
         <span className="text-lg font-semibold">{playerName}</span>  
         <img src={profileIcon} alt="Profile Icon" className="inline w-8 h-8 ml-1" />
-        {pendingRequests.length > 0 && (
+        {pendingFriendRequests.length > 0 && (
           <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-            {pendingRequests.length}
+            {pendingFriendRequests.length}
           </span>
         )}
       </button>
@@ -85,17 +84,18 @@ export default function UserProfile({ playerName, onLogout, onAddFriend, pending
                   </button>
                 </div>
                 <h3 className="text-lg font-semibold mt-4">Pending Friend Requests</h3>
-                {pendingRequests.length === 0 ? (
+                {pendingFriendRequests.length === 0 ? (
                   <p className="text-gray-500">No pending requests</p>
                 ) : (
                   <ul className="list-disc pl-5">
-                    {pendingRequests.map((req) => (
-                      <li key={req.playerID} className="flex items-center gap-2">
-                        {req.playerName}
-                        <button className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition duration-200" onClick={() => onAcceptRequest(req.playerID, true)}>
+                    {pendingFriendRequests.map((req) => (
+                      
+                      <li key={req.friendID} className="flex items-center gap-2">
+                        <span className="text-gray-500">{req.friendName}</span> 
+                        <button className="bg-green-500 text-white px-2 py-1 rounded hover:bg-green-600 transition duration-200" onClick={() => onAcceptFriendRequest(req.friendID, true)}>
                           Accept
                         </button>
-                        <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition duration-200" onClick={() => onAcceptRequest(req.playerID, false)}>
+                        <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition duration-200" onClick={() => onAcceptFriendRequest(req.friendID, false)}>
                           Decline
                         </button>
                       </li>

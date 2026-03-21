@@ -287,9 +287,9 @@ func addFriendHandler(msg AddFriendRequest) {
 		return
 	}
 	pendingFriendRequests := getPendingFriendRequests(friendID)
-	friendRequestReceivedResponse := FriendRequestReceivedResponse{
-		BaseResponse:          newBaseResponse(ResponseFriendRequestReceived),
+	pendingFriendRequestsResponse := PendingFriendRequestsResponse{
+		BaseResponse:          newBaseResponse(ResponsePendingFriendRequests),
 		PendingFriendRequests: pendingFriendRequests,
 	}
-	sendResponse(friend, friendRequestReceivedResponse)
+	sendResponse(friend, pendingFriendRequestsResponse)
 }

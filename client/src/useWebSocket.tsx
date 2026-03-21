@@ -1,13 +1,15 @@
 // useGameWebSocket.ts
 import { useRef, useEffect } from 'react';
-import type { yourLobby, broadcastedLobby, Player, PageType } from './structs';
+import type { yourLobby, broadcastedLobby, Player, PageType, friendRequest } from './structs';
 import { MessageTypes, Page } from './structs';
 import { toast } from 'sonner';
+import type { get } from 'http';
 
 interface UseWebSocketProps {
   onSetPlayer: (player: Player) => void;
   onSetLobby: (lobby: yourLobby) => void;
   onSetLobbies: (lobbies: broadcastedLobby[]) => void;
+  onSetPendingFriendRequests: (pendingFriendRequests: friendRequest[]) => void;
   onSetPage: (page: PageType) => void;
 }
 
@@ -15,6 +17,7 @@ export default function useWebSocket({
   onSetPlayer,
   onSetLobby,
   onSetLobbies,
+  onSetPendingFriendRequests,
   onSetPage,
 }: UseWebSocketProps) {
 
@@ -95,6 +98,7 @@ export default function useWebSocket({
           onSetPage(Page.MainMenu);
           if (data.message) toast(data.message);
           if (data.lobbies) onSetLobbies(data.lobbies);
+          if (data.pendingFriendRequests) onSetPendingFriendRequests(data.pendingFriendRequests);
           break;
 
         case MessageTypes.ResponseLobbyList:
@@ -120,6 +124,10 @@ export default function useWebSocket({
         case MessageTypes.ResponseLobbyLeft:
           onSetLobby({} as yourLobby);
           onSetPage(Page.MainMenu);
+          break;
+
+        case MessageTypes.ResponsePendingFriendRequests:
+          onSetPendingFriendRequests(data.pendingFriendRequests);
           break;
 
         case MessageTypes.ResponseError:
@@ -217,10 +225,10 @@ export default function useWebSocket({
     });
   }
 
-  const acceptRequest = (playerID: string, accept: boolean) => {
+  const acceptFriendRequest = (friendID: string, accept: boolean) => {
     sendMessage({
       type: MessageTypes.RequestAcceptFriendRequest,
-      playerID,
+      friendID,
       accept: accept
     });
   }
@@ -235,7 +243,7 @@ export default function useWebSocket({
     connect,
     logout,
     addFriend,
-    acceptRequest,
+    acceptFriendRequest,
     createLobby,
     joinLobby,
     leaveLobby,

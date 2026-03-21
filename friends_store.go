@@ -37,7 +37,7 @@ func getPendingFriendRequests(playerID string) []FriendRequestDTO {
 
 	for rows.Next() {
 		var fr FriendRequestDTO
-		err := rows.Scan(&fr.PlayerID, &fr.PlayerName)
+		err := rows.Scan(&fr.FriendID, &fr.FriendName)
 		if err != nil {
 			log.Printf("Error scanning friend request: %v", err)
 			continue
