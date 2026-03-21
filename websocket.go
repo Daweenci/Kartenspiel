@@ -220,7 +220,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				continue
 			}
 			msg.PlayerID = player.ID
-			addFriendHandler(msg)
+			sendFriendRequestHandler(msg)
 
 		case RequestAcceptFriendRequest:
 			var msg AcceptFriendRequestRequest

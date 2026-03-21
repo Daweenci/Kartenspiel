@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"log"
 	"strings"
@@ -142,4 +143,30 @@ func getFriendsList(playerID string) []PlayerDTO {
 	}
 
 	return friends
+}
+
+func areFriends(playerID, otherPlayerID string) bool {
+	firstID := playerID
+	secondID := otherPlayerID
+	if firstID > secondID {
+		firstID, secondID = secondID, firstID
+	}
+
+	query := `
+		SELECT 1
+		FROM friend_lists
+		WHERE first_player_id = ? AND second_player_id = ?
+	`
+
+	var exists int
+	err := db.QueryRow(query, firstID, secondID).Scan(&exists)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false
+		}
+		log.Printf("Error checking friendship: %v", err)
+		return false
+	}
+
+	return true
 }

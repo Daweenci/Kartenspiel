@@ -31,7 +31,6 @@ const (
 	ResponseJoinLobbySuccessful   MessageType = "join_lobby_successful"
 	ResponseJoinLobbyFailed       MessageType = "join_lobby_failed"
 	ResponseLobbyLeft             MessageType = "lobby_left"
-	ResponseFriendRequestFailed   MessageType = "friend_request_failed"
 	ResponseFriendRequestSent     MessageType = "friend_request_sent"
 	ResponsePendingFriendRequests MessageType = "pending_friend_requests"
 	ResponseFriendsList           MessageType = "friends_list"
@@ -194,12 +193,9 @@ type LobbyLeftResponse struct {
 	BaseResponse
 }
 
-type FriendRequestFailureResponse struct {
-	BaseResponse
-	Message string `json:"message"`
-}
 type FriendRequestSentResponse struct {
 	BaseResponse
+	Success bool   `json:"success"`
 	Message string `json:"message"`
 }
 

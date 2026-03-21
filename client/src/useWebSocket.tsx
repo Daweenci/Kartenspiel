@@ -142,7 +142,7 @@ export default function useWebSocket({
           break;
 
         case MessageTypes.ResponseFriendRequestSent:
-          toast(data.Message);
+          toast(data.message);
           break;
 
         case MessageTypes.ResponseError:
