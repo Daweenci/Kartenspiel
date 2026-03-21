@@ -34,6 +34,7 @@ const (
 	ResponseFriendRequestFailed   MessageType = "friend_request_failed"
 	ResponseFriendRequestSent     MessageType = "friend_request_sent"
 	ResponsePendingFriendRequests MessageType = "pending_friend_requests"
+	ResponseFriendsList           MessageType = "friends_list"
 	ResponseError                 MessageType = "error"
 )
 

@@ -10,6 +10,7 @@ interface UseWebSocketProps {
   onSetLobby: (lobby: yourLobby) => void;
   onSetLobbies: (lobbies: broadcastedLobby[]) => void;
   onSetPendingFriendRequests: (pendingFriendRequests: friendRequest[]) => void;
+  onSetFriendsList: (friendsList: Player[]) => void;
   onSetPage: (page: PageType) => void;
 }
 
@@ -18,6 +19,7 @@ export default function useWebSocket({
   onSetLobby,
   onSetLobbies,
   onSetPendingFriendRequests,
+  onSetFriendsList,
   onSetPage,
 }: UseWebSocketProps) {
 
@@ -128,6 +130,10 @@ export default function useWebSocket({
 
         case MessageTypes.ResponsePendingFriendRequests:
           onSetPendingFriendRequests(data.pendingFriendRequests);
+          break;
+
+        case MessageTypes.ResponseFriendsList:
+          onSetFriendsList(data.friendsList);
           break;
 
         case MessageTypes.ResponseError:

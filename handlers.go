@@ -345,7 +345,7 @@ func acceptFriendRequestHandler(msg AcceptFriendRequestRequest) {
 	sendResponse(player, pendingFriendRequestsResponsePlayer)
 	if acceptRequest {
 		friendsListResponse := FriendsListResponse{
-			BaseResponse: newBaseResponse(ResponsePendingFriendRequests),
+			BaseResponse: newBaseResponse(ResponseFriendsList),
 			FriendsList:  getFriendsList(playerID),
 		}
 		sendResponse(player, friendsListResponse)
@@ -363,9 +363,9 @@ func acceptFriendRequestHandler(msg AcceptFriendRequestRequest) {
 	sendResponse(friend, pendingFriendRequestsResponseFriend)
 	if acceptRequest {
 		friendsListResponse := FriendsListResponse{
-			BaseResponse: newBaseResponse(ResponsePendingFriendRequests),
+			BaseResponse: newBaseResponse(ResponseFriendsList),
 			FriendsList:  getFriendsList(playerID),
 		}
-		sendResponse(player, friendsListResponse)
+		sendResponse(friend, friendsListResponse)
 	}
 }
