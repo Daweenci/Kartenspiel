@@ -1,19 +1,19 @@
 import { useState } from "react";
 import profileIcon from "@/assets/user-profile-icon.svg";
-import type { friendRequest } from "@/structs";
+import type { friendRequest, Player } from "@/structs";
 
 type Props = {
   playerName: string;
   onLogout: () => void;
   onAddFriend: (friendName: string) => void;
   pendingFriendRequests: friendRequest[];
+  friendsList: Player[];
   onAcceptFriendRequest: (friendID: string, accept: boolean) => void;
 };
 
 
 
-export default function UserProfile({ playerName, onLogout, onAddFriend, pendingFriendRequests, onAcceptFriendRequest }: Props) {
-  console.log("Pending Friend Requests:", pendingFriendRequests);
+export default function UserProfile({ playerName, onLogout, onAddFriend, pendingFriendRequests, friendsList, onAcceptFriendRequest }: Props) {
   type View = "menu" | "friends" | "settings" |  null;
   const [view, setView] = useState<View>(null);
 
@@ -98,6 +98,18 @@ export default function UserProfile({ playerName, onLogout, onAddFriend, pending
                         <button className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition duration-200" onClick={() => onAcceptFriendRequest(req.friendID, false)}>
                           Decline
                         </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <h3 className="text-lg font-semibold mt-4">Friends List</h3>
+                {friendsList.length === 0 ? (
+                  <p className="text-gray-500">No friends yet</p>
+                ) : (
+                  <ul className="list-disc pl-5">
+                    {friendsList.map((friend) => (
+                      <li key={friend.id} className="flex items-center gap-2">
+                        <span className="text-gray-500">{friend.name}</span>
                       </li>
                     ))}
                   </ul>

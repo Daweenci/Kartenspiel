@@ -1,7 +1,7 @@
 // MainMenu.tsx
 import { Button } from '@/components/ui/button';
 import React, { useState } from 'react';
-import type { broadcastedLobby, friendRequest } from '@/structs';
+import type { broadcastedLobby, friendRequest, Player } from '@/structs';
 import CreateLobbyModal from './CreateLobbyModal';
 import JoinPasswordModal from './JoinPasswordModal';
 import { toast } from "sonner"
@@ -14,6 +14,7 @@ type MainMenuProps = {
   currentPlayerID: string;
   playerName: string;
   pendingFriendRequests: friendRequest[];
+  friendsList: Player[];
   logout: () => void;
   addFriend: (friendName: string) => void;
   acceptFriendRequest: (friendID: string, accept: boolean) => void;
@@ -25,6 +26,7 @@ export default function MainMenu({
   lobbies,
   playerName,
   pendingFriendRequests,
+  friendsList,
   logout,
   addFriend,
   acceptFriendRequest,
@@ -65,7 +67,7 @@ export default function MainMenu({
       <div className="relative px-6 py-4">
         <h1 className="text-4xl font-bold text-center">Main Menu</h1>
       <div className="absolute top-4 right-6">
-      <UserProfile playerName={playerName} onLogout={logout} onAddFriend={addFriend} pendingFriendRequests={pendingFriendRequests} onAcceptFriendRequest={acceptFriendRequest} />
+      <UserProfile playerName={playerName} onLogout={logout} onAddFriend={addFriend} pendingFriendRequests={pendingFriendRequests} onAcceptFriendRequest={acceptFriendRequest} friendsList={friendsList} />
     </div>
     </div>
 

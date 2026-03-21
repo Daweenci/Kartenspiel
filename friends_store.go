@@ -35,11 +35,11 @@ func getPendingFriendRequests(playerID string) []FriendRequestDTO {
 	rows, err := db.Query(query, playerID)
 	if err != nil {
 		log.Printf("Error fetching friend requests: %v", err)
-		return nil
+		return []FriendRequestDTO{}
 	}
 	defer rows.Close()
 
-	var requests []FriendRequestDTO
+	requests := make([]FriendRequestDTO, 0)
 
 	for rows.Next() {
 		var fr FriendRequestDTO
@@ -123,11 +123,11 @@ func getFriendsList(playerID string) []PlayerDTO {
 	rows, err := db.Query(query, playerID, playerID, playerID, playerID)
 	if err != nil {
 		log.Printf("Error fetching friends list: %v", err)
-		return nil
+		return []PlayerDTO{}
 	}
 	defer rows.Close()
 
-	var friends []PlayerDTO
+	friends := make([]PlayerDTO, 0)
 
 	for rows.Next() {
 		var p PlayerDTO

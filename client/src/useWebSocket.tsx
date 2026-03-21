@@ -231,11 +231,11 @@ export default function useWebSocket({
     });
   }
 
-  const acceptFriendRequest = (friendID: string, accept: boolean) => {
+  const acceptFriendRequest = (friendID: string, acceptRequest: boolean) => {
     sendMessage({
       type: MessageTypes.RequestAcceptFriendRequest,
       friendID, //person who requested 
-      accept: accept
+      acceptRequest: acceptRequest
     });
   }
 

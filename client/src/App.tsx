@@ -62,6 +62,7 @@ export default function App() {
                 logout={logout}
                 addFriend={addFriend}
                 acceptFriendRequest={acceptFriendRequest}
+                friendsList={friendsList}
               />
             );
           case Page.InLobby:
