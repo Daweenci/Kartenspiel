@@ -54,6 +54,7 @@ export const MessageTypes = {
   ResponseJoinLobbyFailed: 'join_lobby_failed',
   ResponseLobbyLeft: 'lobby_left',
   ResponsePendingFriendRequests: 'pending_friend_requests',
+  ResponseFriendRequestSent: 'friend_request_sent',
   ResponseFriendsList: 'friends_list',
   ResponseError: 'error',
 } as const;

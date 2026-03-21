@@ -105,22 +105,20 @@ func handleFriendRequest(senderID, receiverID string, acceptRequest bool) error 
 
 func getFriendsList(playerID string) []PlayerDTO {
 	query := `
-		SELECT 
-			CASE 
-				WHEN fl.first_player_id = ? THEN fl.second_player_id
-				ELSE fl.first_player_id
-			END AS friend_id,
-			p.username
+		SELECT fl.second_player_id AS friend_id, p.username
 		FROM friend_lists fl
-		JOIN players p 
-			ON p.id = CASE 
-				WHEN fl.first_player_id = ? THEN fl.second_player_id
-				ELSE fl.first_player_id
-			END
-		WHERE fl.first_player_id = ? OR fl.second_player_id = ?
+		JOIN players p ON p.id = fl.second_player_id
+		WHERE fl.first_player_id = ?
+
+		UNION
+
+		SELECT fl.first_player_id AS friend_id, p.username
+		FROM friend_lists fl
+		JOIN players p ON p.id = fl.first_player_id
+		WHERE fl.second_player_id = ?
 	`
 
-	rows, err := db.Query(query, playerID, playerID, playerID, playerID)
+	rows, err := db.Query(query, playerID, playerID)
 	if err != nil {
 		log.Printf("Error fetching friends list: %v", err)
 		return []PlayerDTO{}

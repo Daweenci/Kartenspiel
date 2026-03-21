@@ -174,12 +174,7 @@ type LobbiesUpdateResponse struct {
 	Lobbies []LobbyDTO `json:"lobbies"`
 }
 
-type IncorrectLobbyPasswordResponse struct {
-	BaseResponse
-	Message string `json:"message"`
-}
-
-type LobbyFullResponse struct {
+type LobbyJoinFailedResponse struct {
 	BaseResponse
 	Message string `json:"message"`
 }

@@ -119,6 +119,10 @@ export default function useWebSocket({
           toast('Joined lobby successfully');
           break;
 
+        case MessageTypes.ResponseJoinLobbyFailed:
+          toast(data.message || 'Failed to join lobby');
+          break;
+
         case MessageTypes.ResponseLobbyUpdated:
           onSetLobby(data.lobby);
           break;
@@ -134,6 +138,10 @@ export default function useWebSocket({
 
         case MessageTypes.ResponseFriendsList:
           onSetFriendsList(data.friendsList);
+          break;
+
+        case MessageTypes.ResponseFriendRequestSent:
+          toast(data.Message);
           break;
 
         case MessageTypes.ResponseError:

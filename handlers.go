@@ -41,7 +41,7 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 
 	// Check password
 	if lobby.Password != msg.Password {
-		sendResponse(player, IncorrectLobbyPasswordResponse{
+		sendResponse(player, LobbyJoinFailedResponse{
 			BaseResponse: newBaseResponse(ResponseJoinLobbyFailed),
 			Message:      "Incorrect password",
 		})
@@ -51,7 +51,7 @@ func joinLobbyHandler(msg JoinLobbyRequest) {
 
 	// Check lobby capacity
 	if len(lobby.Players) >= lobby.MaxPlayers {
-		lobbyFullResponse := LobbyFullResponse{
+		lobbyFullResponse := LobbyJoinFailedResponse{
 			BaseResponse: newBaseResponse(ResponseJoinLobbyFailed),
 			Message:      "Lobby is full",
 		}
@@ -364,7 +364,7 @@ func acceptFriendRequestHandler(msg AcceptFriendRequestRequest) {
 	if acceptRequest {
 		friendsListResponse := FriendsListResponse{
 			BaseResponse: newBaseResponse(ResponseFriendsList),
-			FriendsList:  getFriendsList(playerID),
+			FriendsList:  getFriendsList(friendID),
 		}
 		sendResponse(friend, friendsListResponse)
 	}
