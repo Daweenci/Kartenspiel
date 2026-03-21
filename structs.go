@@ -100,6 +100,13 @@ type GetPendingFriendRequestsRequest struct {
 	PlayerID string      `json:"playerID"`
 }
 
+type AcceptFriendRequestRequest struct {
+	Type          MessageType `json:"type"`
+	FriendID      string      `json:"friendID"` //person that requested in the first place
+	AcceptRequest bool        `json:"acceptRequest"`
+	PlayerID      string      `json:"playerID"`
+}
+
 type StartGame struct { //TODO: Why StartGame not response or request?
 	Type     MessageType `json:"type"`
 	LobbyID  string      `json:"lobbyID"`
@@ -204,7 +211,12 @@ type PendingFriendRequestsResponse struct {
 	PendingFriendRequests []FriendRequestDTO `json:"pendingFriendRequests"`
 }
 
-type FriendRequestDTO struct {
+type FriendsListResponse struct {
+	BaseResponse
+	FriendsList []PlayerDTO `json:"friendsList"`
+}
+
+type FriendRequestDTO struct { //durch PlayerDTO ersetzen?
 	FriendName string `json:"friendName"`
 	FriendID   string `json:"friendID"`
 }

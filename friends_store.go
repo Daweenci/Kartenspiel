@@ -13,7 +13,6 @@ func createFriendRequest(playerID, friendID string) error {
 
 	_, err := db.Exec(query, playerID, friendID)
 	if err != nil {
-		// detect duplicate (same sender + receiver already exists)
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			return ErrFriendRequestExists
 		}
@@ -57,4 +56,92 @@ func getPendingFriendRequests(playerID string) []FriendRequestDTO {
 	}
 
 	return requests
+}
+
+func handleFriendRequest(senderID, receiverID string, acceptRequest bool) error {
+	deleteQuery := `
+		DELETE FROM friend_requests
+		WHERE sender_id = ? AND receiver_id = ? AND status = 'pending'
+	`
+
+	result, err := db.Exec(deleteQuery, senderID, receiverID)
+	if err != nil {
+		log.Printf("Error deleting friend request: %v", err)
+		return err
+	}
+
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		return errors.New("friend request not found")
+	}
+
+	if !acceptRequest {
+		return nil
+	}
+
+	firstID := senderID
+	secondID := receiverID
+	if firstID > secondID {
+		firstID, secondID = secondID, firstID
+	}
+
+	insertQuery := `
+		INSERT INTO friend_lists (first_player_id, second_player_id)
+		VALUES (?, ?)
+	`
+
+	_, err = db.Exec(insertQuery, firstID, secondID)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return nil
+		}
+
+		log.Printf("Error creating friendship: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func getFriendsList(playerID string) []PlayerDTO {
+	query := `
+		SELECT 
+			CASE 
+				WHEN fl.first_player_id = ? THEN fl.second_player_id
+				ELSE fl.first_player_id
+			END AS friend_id,
+			p.username
+		FROM friend_lists fl
+		JOIN players p 
+			ON p.id = CASE 
+				WHEN fl.first_player_id = ? THEN fl.second_player_id
+				ELSE fl.first_player_id
+			END
+		WHERE fl.first_player_id = ? OR fl.second_player_id = ?
+	`
+
+	rows, err := db.Query(query, playerID, playerID, playerID, playerID)
+	if err != nil {
+		log.Printf("Error fetching friends list: %v", err)
+		return nil
+	}
+	defer rows.Close()
+
+	var friends []PlayerDTO
+
+	for rows.Next() {
+		var p PlayerDTO
+		err := rows.Scan(&p.ID, &p.Name)
+		if err != nil {
+			log.Printf("Error scanning friend: %v", err)
+			continue
+		}
+		friends = append(friends, p)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Printf("Row iteration error: %v", err)
+	}
+
+	return friends
 }

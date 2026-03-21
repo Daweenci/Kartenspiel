@@ -228,7 +228,7 @@ export default function useWebSocket({
   const acceptFriendRequest = (friendID: string, accept: boolean) => {
     sendMessage({
       type: MessageTypes.RequestAcceptFriendRequest,
-      friendID,
+      friendID, //person who requested 
       accept: accept
     });
   }

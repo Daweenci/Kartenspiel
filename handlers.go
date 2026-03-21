@@ -308,3 +308,64 @@ func addFriendHandler(msg AddFriendRequest) {
 	}
 	sendResponse(friend, pendingFriendRequestsResponse)
 }
+
+func acceptFriendRequestHandler(msg AcceptFriendRequestRequest) {
+	friendID := msg.FriendID
+	playerID := msg.PlayerID
+	acceptRequest := msg.AcceptRequest
+	err := handleFriendRequest(friendID, playerID, acceptRequest)
+
+	if err != nil {
+		activePlayersLock.RLock()
+		player, ok := activePlayers[playerID]
+		activePlayersLock.RUnlock()
+
+		if ok {
+			sendErrorToPlayer(player, "Error handling friend request")
+		}
+
+		log.Printf("acceptFriendRequestHandler: %v", err)
+		return
+	}
+
+	activePlayersLock.RLock()
+	player, playerOk := activePlayers[msg.PlayerID]
+	friend, friendOk := activePlayers[friendID]
+	activePlayersLock.RUnlock()
+	if !playerOk {
+		log.Println("acceptFriendRequestHandler: Player not found")
+		disconnectPlayer(msg.PlayerID)
+		return
+	}
+	pendingFriendRequestsPlayer := getPendingFriendRequests(playerID)
+	pendingFriendRequestsResponsePlayer := PendingFriendRequestsResponse{
+		BaseResponse:          newBaseResponse(ResponsePendingFriendRequests),
+		PendingFriendRequests: pendingFriendRequestsPlayer,
+	}
+	sendResponse(player, pendingFriendRequestsResponsePlayer)
+	if acceptRequest {
+		friendsListResponse := FriendsListResponse{
+			BaseResponse: newBaseResponse(ResponsePendingFriendRequests),
+			FriendsList:  getFriendsList(playerID),
+		}
+		sendResponse(player, friendsListResponse)
+	}
+
+	if !friendOk {
+		log.Println("acceptFriendRequestHandler: Friend not online")
+		return
+	}
+	pendingFriendRequestsFriend := getPendingFriendRequests(friendID)
+	pendingFriendRequestsResponseFriend := PendingFriendRequestsResponse{
+		BaseResponse:          newBaseResponse(ResponsePendingFriendRequests),
+		PendingFriendRequests: pendingFriendRequestsFriend,
+	}
+	sendResponse(friend, pendingFriendRequestsResponseFriend)
+	if acceptRequest {
+		friendsListResponse := FriendsListResponse{
+			BaseResponse: newBaseResponse(ResponsePendingFriendRequests),
+			FriendsList:  getFriendsList(playerID),
+		}
+		sendResponse(player, friendsListResponse)
+	}
+}
