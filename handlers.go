@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log"
 
 	"github.com/google/uuid"
@@ -240,33 +241,47 @@ func addFriendHandler(msg AddFriendRequest) {
 	friendID, ok := getPlayerIdByName(msg.FriendName)
 	if !ok {
 		log.Println("addFriendHandler: Friend not found")
+
 		friendRequestFailureResponse := FriendRequestFailureResponse{
 			BaseResponse: newBaseResponse(ResponseFriendRequestFailed),
 			Message:      "Player not found",
 		}
+
 		activePlayersLock.RLock()
 		player, ok := activePlayers[msg.PlayerID]
 		activePlayersLock.RUnlock()
+
 		if !ok {
 			log.Println("addFriendHandler: Player not found")
 			disconnectPlayer(msg.PlayerID)
 			return
 		}
+
 		sendResponse(player, friendRequestFailureResponse)
 		return
 	}
-	friendRequestOk := createFriendRequest(msg.PlayerID, friendID)
-	if !friendRequestOk {
+
+	err := createFriendRequest(msg.PlayerID, friendID)
+	if err != nil {
 		activePlayersLock.RLock()
 		player, ok := activePlayers[msg.PlayerID]
 		activePlayersLock.RUnlock()
+
 		if !ok {
 			log.Println("addFriendHandler: Player not found")
 			disconnectPlayer(msg.PlayerID)
 			return
 		}
-		sendErrorToPlayer(player, "Error creating Friend Request")
 
+		// 🔥 specific error handling
+		if errors.Is(err, ErrFriendRequestExists) {
+			sendErrorToPlayer(player, "Friend request already sent")
+			return
+		}
+
+		log.Printf("addFriendHandler: %v", err)
+		sendErrorToPlayer(player, "Error creating friend request")
+		return
 	}
 	activePlayersLock.RLock()
 	player, playerOk := activePlayers[msg.PlayerID]

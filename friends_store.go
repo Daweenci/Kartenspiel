@@ -1,21 +1,28 @@
 package main
 
 import (
-	"database/sql"
+	"errors"
 	"log"
+	"strings"
 )
 
-func createFriendRequest(playerID, friendID string) bool {
+var ErrFriendRequestExists = errors.New("friend request already exists")
+
+func createFriendRequest(playerID, friendID string) error {
 	query := "INSERT INTO friend_requests (sender_id, receiver_id) VALUES (?, ?)"
+
 	_, err := db.Exec(query, playerID, friendID)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return false
+		// detect duplicate (same sender + receiver already exists)
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return ErrFriendRequestExists
 		}
-		log.Printf("Error occurred while fetching player ID by name: %v", err)
-		return false
+
+		log.Printf("Error creating friend request: %v", err)
+		return err
 	}
-	return true
+
+	return nil
 }
 
 func getPendingFriendRequests(playerID string) []FriendRequestDTO {
