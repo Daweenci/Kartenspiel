@@ -153,8 +153,8 @@ export default function useWebSocket({
           toast("Friend request accepted by " + data.friend.name);
           break;
 
-        case MessageTypes.ResponseFriendCameOnline:
-          toast(data.friend.name + " is now online");
+        case MessageTypes.ResponseFriendOnlineStatus:
+          toast(data.friend.name + " is now " + data.status);
           break;
 
         case MessageTypes.ResponseError:

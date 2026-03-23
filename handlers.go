@@ -371,16 +371,17 @@ func acceptFriendRequestHandler(msg AcceptFriendRequestRequest) {
 	}
 }
 
-func pingAllFriendsHandler(playerID string) {
+func pingAllFriendsOnlineStatusHandler(playerID string, status string) {
 	player, err := getPlayerByID(playerID)
 	if err != nil {
 		log.Printf("pingAllFriendsHandler: Error getting player by ID: %v", err)
 		return
 	}
 	friendsList := getFriendsWithOnlineStatus(playerID)
-	friendsCameOnline := FriendCameOnlineResponse{
-		BaseResponse: newBaseResponse(ResponseFriendCameOnline),
+	friendCameOnline := FriendOnlineStatusResponse{
+		BaseResponse: newBaseResponse(ResponseFriendOnlineStatus),
 		Friend:       PlayerDTO{ID: player.ID, Name: player.Username},
+		Status:       status,
 	}
 
 	for _, friend := range friendsList {
@@ -388,7 +389,7 @@ func pingAllFriendsHandler(playerID string) {
 		friend, ok := activePlayers[friend.ID]
 		activePlayersLock.RUnlock()
 		if ok {
-			sendResponse(friend, friendsCameOnline)
+			sendResponse(friend, friendCameOnline)
 		}
 	}
 }

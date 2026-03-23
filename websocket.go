@@ -65,6 +65,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if exists && current.Conn == conn {
 				disconnectPlayer(player.ID)
 				broadcastLobbies()
+				pingAllFriendsOnlineStatusHandler(player.ID, Offline)
 			}
 
 		}
@@ -159,7 +160,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			sendResponse(player, welcomeResponse)
 			log.Printf("Player %s authenticated successfully", player.ID)
-			pingAllFriendsHandler(player.ID)
+			pingAllFriendsOnlineStatusHandler(player.ID, Online)
 			continue
 		}
 

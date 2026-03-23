@@ -63,7 +63,7 @@ export const MessageTypes = {
   ResponseFriendRequestSent: 'friend_request_sent',
   ResponseFriendRequestReceived: 'friend_request_received',
   ResponseFriendRequestAccepted: 'friend_request_accepted',
-  ResponseFriendCameOnline: 'friend_came_online',
+  ResponseFriendOnlineStatus: 'friend_online_status',
   ResponseFriendsList: 'friends_list',
   ResponseError: 'error',
 } as const;

@@ -9,6 +9,9 @@ import (
 type MessageType string
 
 const (
+	Online  string = "online"
+	Offline string = "offline"
+
 	RequestAuthentication      MessageType = "authenticate"
 	RequestLogin               MessageType = "login"
 	RequestRegister            MessageType = "register"
@@ -35,7 +38,7 @@ const (
 	ResponsePendingFriendRequests MessageType = "pending_friend_requests"
 	ResponseFriendRequestReceived MessageType = "friend_request_received"
 	ResponseFriendRequestAccepted MessageType = "friend_request_accepted"
-	ResponseFriendCameOnline      MessageType = "friend_came_online"
+	ResponseFriendOnlineStatus    MessageType = "friend_online_status"
 	ResponseFriendsList           MessageType = "friends_list"
 	ResponseError                 MessageType = "error"
 )
@@ -228,14 +231,10 @@ type FriendsListResponse struct {
 	FriendsList []FriendDTO `json:"friendsList"`
 }
 
-type FriendCameOnlineResponse struct {
+type FriendOnlineStatusResponse struct {
 	BaseResponse
 	Friend PlayerDTO `json:"friend"`
-}
-
-type FriendWentOfflineResponse struct {
-	BaseResponse
-	Friend PlayerDTO `json:"friend"`
+	Status string    `json:"status"`
 }
 
 type ErrorResponse struct {
