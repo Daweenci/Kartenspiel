@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import type { yourLobby } from '@/structs';
+import type { Friend, yourLobby } from '@/structs';
 import inviteIcon from "@/assets/invite.svg";
 
 type LobbyScreenProps = {
   initLobby: yourLobby;
+  friendsList: Friend[];
   startGame: () => void;
   cancelGame: () => void;
   leaveLobby: () => void;
@@ -14,6 +15,7 @@ export default function LobbyScreen({
   cancelGame,
   leaveLobby,
   initLobby,
+  friendsList,
 }: LobbyScreenProps) {
   const [gameStarting, setGameStarting] = useState(false);
   const [showFriends, setShowFriends] = useState(false);
@@ -40,9 +42,22 @@ export default function LobbyScreen({
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="flex-col items-center justify-center p-16 border-2 border-gray-300 rounded-4xl">
-        <div onClick={toggleShowFriends} className="border-2 border-gray-300 rounded p-2 cursor-pointer mb-4 w-24 hover:bg-gray-100">
-          <span>Invite</span><img src={inviteIcon} alt="Invite" className="inline w-8 h-8 ml-1" />
+        <div className="inline-block relative">
+          <div
+            onClick={toggleShowFriends}
+            className="border-2 border-gray-300 rounded p-2 cursor-pointer mb-1 w-24 hover:bg-gray-100"
+          >
+            <span>Invite</span>
+            <img src={inviteIcon} alt="Invite" className="inline w-8 h-8 ml-1" />
+          </div>
+
+          {showFriends && (
+            <div className="absolute left-0 top-full w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-10 overflow-hidden">
+              <FriendsList friendsList={friendsList} />
+            </div>
+          )}
         </div>
+        <div className="mb-3"></div>
         <h1>
           <strong>Lobby:</strong> {initLobby.name}
         </h1>
@@ -86,6 +101,32 @@ export default function LobbyScreen({
   );
 }
 
-//function FriendsList({
-  
-//})
+function FriendsList({ friendsList }: { friendsList: Friend[] }) {
+  const onlineFriends = friendsList.filter(f => f.isOnline);
+
+  if (onlineFriends.length === 0) {
+    return (
+      <div className="px-3 py-2 text-sm text-gray-500">
+        No friends online
+      </div>
+    );
+  }
+
+  return (
+    <ul className="max-h-60 overflow-y-auto divide-y divide-gray-100 m-0 p-0 list-none">
+      {onlineFriends.map(friend => (
+        <li
+          key={friend.id}
+          className="flex items-center justify-between px-3 py-2 text-sm hover:bg-gray-100 transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            {/* status dot */}
+            <span className="w-2 h-2 rounded-full bg-green-500"></span>
+
+            <span className="text-gray-800">{friend.name}</span>
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}

@@ -71,6 +71,7 @@ export default function App() {
                 startGame={handleStartGame}
                 cancelGame={handleCancelGame}
                 leaveLobby={handleLeaveLobby}
+                friendsList={friendsList}
                 initLobby={lobby}
               />
             );
