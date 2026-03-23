@@ -155,7 +155,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				Message:               "Welcome back, " + player.Name + "!",
 				Lobbies:               getLobbiesList(),
 				PendingFriendRequests: getPendingFriendRequests(player.ID),
-				FriendsList:           getFriendsList(player.ID),
+				FriendsList:           getFriendsWithOnlineStatus(player.ID),
 			}
 			sendResponse(player, welcomeResponse)
 			log.Printf("Player %s authenticated successfully", player.ID)

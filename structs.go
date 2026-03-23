@@ -161,7 +161,7 @@ type WelcomeResponse struct {
 	Message               string      `json:"message"`
 	Lobbies               []LobbyDTO  `json:"lobbies"`
 	PendingFriendRequests []PlayerDTO `json:"pendingFriendRequests"`
-	FriendsList           []PlayerDTO `json:"friendsList"`
+	FriendsList           []FriendDTO `json:"friendsList"`
 }
 
 type LobbyDTO struct {
@@ -215,7 +215,7 @@ type PendingFriendRequestsResponse struct {
 
 type FriendRequestReceivedResponse struct {
 	BaseResponse
-	Requester PlayerDTO `json:"requester"`
+	Player PlayerDTO `json:"player"`
 }
 
 type FriendRequestAcceptedResponse struct {
@@ -229,6 +229,11 @@ type FriendsListResponse struct {
 }
 
 type FriendCameOnlineResponse struct {
+	BaseResponse
+	Friend PlayerDTO `json:"friend"`
+}
+
+type FriendWentOfflineResponse struct {
 	BaseResponse
 	Friend PlayerDTO `json:"friend"`
 }
