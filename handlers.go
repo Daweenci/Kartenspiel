@@ -371,7 +371,7 @@ func acceptFriendRequestHandler(msg AcceptFriendRequestRequest) {
 	}
 }
 
-func pingAllFriendsOnlineStatusHandler(playerID string, status string) {
+func pingAllFriendsOnlineStatusHandler(playerID string, isOnline bool) {
 	player, err := getPlayerByID(playerID)
 	if err != nil {
 		log.Printf("pingAllFriendsHandler: Error getting player by ID: %v", err)
@@ -380,8 +380,7 @@ func pingAllFriendsOnlineStatusHandler(playerID string, status string) {
 	friendsList := getFriendsWithOnlineStatus(playerID)
 	friendCameOnline := FriendOnlineStatusResponse{
 		BaseResponse: newBaseResponse(ResponseFriendOnlineStatus),
-		Friend:       PlayerDTO{ID: player.ID, Name: player.Username},
-		Status:       status,
+		Friend:       FriendDTO{ID: player.ID, Name: player.Username, IsOnline: isOnline},
 	}
 
 	for _, friend := range friendsList {

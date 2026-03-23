@@ -233,8 +233,7 @@ type FriendsListResponse struct {
 
 type FriendOnlineStatusResponse struct {
 	BaseResponse
-	Friend PlayerDTO `json:"friend"`
-	Status string    `json:"status"`
+	Friend FriendDTO `json:"friend"`
 }
 
 type ErrorResponse struct {

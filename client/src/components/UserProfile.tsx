@@ -1,13 +1,13 @@
 import { useState } from "react";
 import profileIcon from "@/assets/user-profile-icon.svg";
-import type { friendRequest, Player } from "@/structs";
+import type { Friend, friendRequest } from "@/structs";
 
 type Props = {
   playerName: string;
   onLogout: () => void;
   onAddFriend: (friendName: string) => void;
   pendingFriendRequests: friendRequest[];
-  friendsList: Player[];
+  friendsList: Friend[];
   onAcceptFriendRequest: (friendID: string, accept: boolean) => void;
 };
 
@@ -109,7 +109,8 @@ export default function UserProfile({ playerName, onLogout, onAddFriend, pending
                   <ul className="list-disc pl-5">
                     {friendsList.map((friend) => (
                       <li key={friend.id} className="flex items-center gap-2">
-                        <span className="text-gray-500">{friend.name}</span>
+                        <span className="text-gray-500">{friend.name} </span>
+                        <span className={`inline-block w-3 h-3 rounded-full ${friend.isOnline === true ? "bg-green-500" : "bg-gray-500"}`}></span>
                       </li>
                     ))}
                   </ul>

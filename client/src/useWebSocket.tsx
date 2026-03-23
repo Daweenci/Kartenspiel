@@ -3,14 +3,13 @@ import { useRef, useEffect } from 'react';
 import type { yourLobby, broadcastedLobby, Player, PageType, friendRequest, Friend } from './structs';
 import { MessageTypes, Page } from './structs';
 import { toast } from 'sonner';
-import type { get } from 'http';
 
 interface UseWebSocketProps {
   onSetPlayer: (player: Player) => void;
   onSetLobby: (lobby: yourLobby) => void;
   onSetLobbies: (lobbies: broadcastedLobby[]) => void;
   onSetPendingFriendRequests: (pendingFriendRequests: friendRequest[]) => void;
-  onSetFriendsList: (friendsList: Friend[]) => void;
+  onSetFriendsList: React.Dispatch<React.SetStateAction<Friend[]>>;
   onSetPage: (page: PageType) => void;
 }
 
@@ -153,9 +152,23 @@ export default function useWebSocket({
           toast("Friend request accepted by " + data.friend.name);
           break;
 
-        case MessageTypes.ResponseFriendOnlineStatus:
-          toast(data.friend.name + " is now " + data.status);
+        case MessageTypes.ResponseFriendOnlineStatus: {
+
+          onSetFriendsList(prev =>
+            prev.map(f =>
+              f.id === data.friend.id
+                ? { ...f, isOnline: data.friend.isOnline }
+                : f
+            )
+          );
+
+          toast(`${data.friend.name} is now ${data.friend.isOnline ? "online" : "offline"}`);
           break;
+        }
+
+  
+
+  break;
 
         case MessageTypes.ResponseError:
           toast(data.error || 'An error occurred');
