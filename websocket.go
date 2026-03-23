@@ -143,8 +143,6 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 			go player.writePump()
 
-			// Set online status
-			//setPlayerOnlineStatus(player.ID, true) TODO: ping all friends that player online, add to broadcasting.go
 			authenticated = true
 
 			// Send welcome message
@@ -161,6 +159,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 			sendResponse(player, welcomeResponse)
 			log.Printf("Player %s authenticated successfully", player.ID)
+			pingAllFriendsHandler(player.ID)
 			continue
 		}
 

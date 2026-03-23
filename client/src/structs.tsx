@@ -3,6 +3,12 @@ export type Player = {
 	id:   string;
 };
 
+export type Friend = {
+  id: string;
+  name: string;
+  isOnline: boolean;
+}
+
 export type yourLobby = {
   id: string;
   name: string;
@@ -55,6 +61,9 @@ export const MessageTypes = {
   ResponseLobbyLeft: 'lobby_left',
   ResponsePendingFriendRequests: 'pending_friend_requests',
   ResponseFriendRequestSent: 'friend_request_sent',
+  ResponseFriendRequestReceived: 'friend_request_received',
+  ResponseFriendRequestAccepted: 'friend_request_accepted',
+  ResponseFriendCameOnline: 'friend_came_online',
   ResponseFriendsList: 'friends_list',
   ResponseError: 'error',
 } as const;

@@ -25,7 +25,7 @@ func createFriendRequest(playerID, friendID string) error {
 	return nil
 }
 
-func getPendingFriendRequests(playerID string) []FriendRequestDTO {
+func getPendingFriendRequests(playerID string) []PlayerDTO {
 	query := `
 		SELECT fr.sender_id, p.username
 		FROM friend_requests fr
@@ -36,15 +36,15 @@ func getPendingFriendRequests(playerID string) []FriendRequestDTO {
 	rows, err := db.Query(query, playerID)
 	if err != nil {
 		log.Printf("Error fetching friend requests: %v", err)
-		return []FriendRequestDTO{}
+		return []PlayerDTO{}
 	}
 	defer rows.Close()
 
-	requests := make([]FriendRequestDTO, 0)
+	requests := make([]PlayerDTO, 0)
 
 	for rows.Next() {
-		var fr FriendRequestDTO
-		err := rows.Scan(&fr.FriendID, &fr.FriendName)
+		var fr PlayerDTO
+		err := rows.Scan(&fr.ID, &fr.Name)
 		if err != nil {
 			log.Printf("Error scanning friend request: %v", err)
 			continue

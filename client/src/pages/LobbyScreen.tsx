@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { yourLobby } from '@/structs';
+import inviteIcon from "@/assets/invite.svg";
 
 type LobbyScreenProps = {
   initLobby: yourLobby;
@@ -15,10 +16,16 @@ export default function LobbyScreen({
   initLobby,
 }: LobbyScreenProps) {
   const [gameStarting, setGameStarting] = useState(false);
+  const [showFriends, setShowFriends] = useState(false);
+
 
   const handleLeaveLobby = () => {
     leaveLobby();
   };
+
+  const toggleShowFriends = () => {
+    setShowFriends(prev => (prev ? false : true));
+};
 
   const handleToggleGameStart = () => {
     if (gameStarting) {
@@ -33,6 +40,9 @@ export default function LobbyScreen({
   return (
     <div className="flex items-center justify-center min-h-screen">
       <div className="flex-col items-center justify-center p-16 border-2 border-gray-300 rounded-4xl">
+        <div onClick={toggleShowFriends} className="border-2 border-gray-300 rounded p-2 cursor-pointer mb-4 w-24 hover:bg-gray-100">
+          <span>Invite</span><img src={inviteIcon} alt="Invite" className="inline w-8 h-8 ml-1" />
+        </div>
         <h1>
           <strong>Lobby:</strong> {initLobby.name}
         </h1>
@@ -75,3 +85,7 @@ export default function LobbyScreen({
     </div>
   );
 }
+
+//function FriendsList({
+  
+//})

@@ -145,6 +145,18 @@ export default function useWebSocket({
           toast(data.message);
           break;
 
+        case MessageTypes.ResponseFriendRequestReceived:
+          toast(data.message);
+          break;
+
+        case MessageTypes.ResponseFriendRequestAccepted:
+          toast(data.message);
+          break;
+
+        case MessageTypes.ResponseFriendCameOnline:
+          toast(data.message);
+          break;
+
         case MessageTypes.ResponseError:
           toast(data.error || 'An error occurred');
           break;

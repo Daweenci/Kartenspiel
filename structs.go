@@ -33,6 +33,9 @@ const (
 	ResponseLobbyLeft             MessageType = "lobby_left"
 	ResponseFriendRequestSent     MessageType = "friend_request_sent"
 	ResponsePendingFriendRequests MessageType = "pending_friend_requests"
+	ResponseFriendRequestReceived MessageType = "friend_request_received"
+	ResponseFriendRequestAccepted MessageType = "friend_request_accepted"
+	ResponseFriendCameOnline      MessageType = "friend_came_online"
 	ResponseFriendsList           MessageType = "friends_list"
 	ResponseError                 MessageType = "error"
 )
@@ -47,6 +50,12 @@ type Player struct {
 type PlayerDTO struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type FriendDTO struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	IsOnline bool   `json:"isOnline"`
 }
 
 type PlayerStarted struct {
@@ -148,11 +157,11 @@ func (r BaseResponse) GetType() MessageType {
 
 type WelcomeResponse struct {
 	BaseResponse
-	Player                PlayerDTO          `json:"player"`
-	Message               string             `json:"message"`
-	Lobbies               []LobbyDTO         `json:"lobbies"`
-	PendingFriendRequests []FriendRequestDTO `json:"pendingFriendRequests"`
-	FriendsList           []PlayerDTO        `json:"friendsList"`
+	Player                PlayerDTO   `json:"player"`
+	Message               string      `json:"message"`
+	Lobbies               []LobbyDTO  `json:"lobbies"`
+	PendingFriendRequests []PlayerDTO `json:"pendingFriendRequests"`
+	FriendsList           []PlayerDTO `json:"friendsList"`
 }
 
 type LobbyDTO struct {
@@ -201,17 +210,27 @@ type FriendRequestSentResponse struct {
 
 type PendingFriendRequestsResponse struct {
 	BaseResponse
-	PendingFriendRequests []FriendRequestDTO `json:"pendingFriendRequests"`
+	PendingFriendRequests []PlayerDTO `json:"pendingFriendRequests"`
+}
+
+type FriendRequestReceivedResponse struct {
+	BaseResponse
+	Requester PlayerDTO `json:"requester"`
+}
+
+type FriendRequestAcceptedResponse struct {
+	BaseResponse
+	Friend FriendDTO `json:"friend"`
 }
 
 type FriendsListResponse struct {
 	BaseResponse
-	FriendsList []PlayerDTO `json:"friendsList"`
+	FriendsList []FriendDTO `json:"friendsList"`
 }
 
-type FriendRequestDTO struct { //durch PlayerDTO ersetzen?
-	FriendName string `json:"friendName"`
-	FriendID   string `json:"friendID"`
+type FriendCameOnlineResponse struct {
+	BaseResponse
+	Friend PlayerDTO `json:"friend"`
 }
 
 type ErrorResponse struct {

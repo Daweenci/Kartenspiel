@@ -336,7 +336,7 @@ func acceptFriendRequestHandler(msg AcceptFriendRequestRequest) {
 	if acceptRequest {
 		friendsListResponse := FriendsListResponse{
 			BaseResponse: newBaseResponse(ResponseFriendsList),
-			FriendsList:  getFriendsList(playerID),
+			FriendsList:  getFriendsWithOnlineStatus(playerID),
 		}
 		sendResponse(player, friendsListResponse)
 	}
@@ -351,11 +351,60 @@ func acceptFriendRequestHandler(msg AcceptFriendRequestRequest) {
 		PendingFriendRequests: pendingFriendRequestsFriend,
 	}
 	sendResponse(friend, pendingFriendRequestsResponseFriend)
-	if acceptRequest {
-		friendsListResponse := FriendsListResponse{
-			BaseResponse: newBaseResponse(ResponseFriendsList),
-			FriendsList:  getFriendsList(friendID),
+
+	if acceptRequest && friendOk {
+		playerInfo, err := getPlayerByID(playerID)
+		if err != nil {
+			log.Printf("acceptFriendRequestHandler: Error getting player info: %v", err)
+			return
 		}
-		sendResponse(friend, friendsListResponse)
+		playerName := playerInfo.Username
+		friendRequestAcceptedResponse := FriendRequestAcceptedResponse{
+			BaseResponse: newBaseResponse(ResponseFriendRequestAccepted),
+			Friend: FriendDTO{
+				ID:       player.ID,
+				Name:     playerName,
+				IsOnline: true,
+			},
+		}
+		sendResponse(friend, friendRequestAcceptedResponse)
 	}
+}
+
+func pingAllFriendsHandler(playerID string) {
+	player, err := getPlayerByID(playerID)
+	if err != nil {
+		log.Printf("pingAllFriendsHandler: Error getting player by ID: %v", err)
+		return
+	}
+	friendsList := getFriendsWithOnlineStatus(playerID)
+	friendsCameOnline := FriendCameOnlineResponse{
+		BaseResponse: newBaseResponse(ResponseFriendCameOnline),
+		Friend:       PlayerDTO{ID: player.ID, Name: player.Username},
+	}
+
+	for _, friend := range friendsList {
+		activePlayersLock.RLock()
+		friend, ok := activePlayers[friend.ID]
+		activePlayersLock.RUnlock()
+		if ok {
+			sendResponse(friend, friendsCameOnline)
+		}
+	}
+}
+
+func getFriendsWithOnlineStatus(playerID string) []FriendDTO {
+	friendsList := getFriendsList(playerID)
+	friendsListWithOnlineStatus := make([]FriendDTO, len(friendsList))
+	for i, f := range friendsList {
+		activePlayersLock.RLock()
+		_, isOnline := activePlayers[f.ID]
+		activePlayersLock.RUnlock()
+		friendsListWithOnlineStatus[i] = FriendDTO{
+			ID:       f.ID,
+			Name:     f.Name,
+			IsOnline: isOnline,
+		}
+	}
+	return friendsListWithOnlineStatus
 }
